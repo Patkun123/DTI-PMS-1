@@ -57,19 +57,19 @@ export default function Create() {
                                 <>
                                     <div className="space-y-2">
                                         <Label htmlFor="item_description">Item Description *</Label>
-                                        <textarea
-                                            id="item_description"
-                                            name="item_description"
-                                            rows={4}
-                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            placeholder="Enter detailed description of the item"
-                                            required
-                                        />
+                                            <textarea
+                                                id="item_description"
+                                                name="item_description"
+                                                rows={4}
+                                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                placeholder="Enter detailed description of the item"
+                                                required
+                                            />
                                         <InputError message={errors.item_description} />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <Label htmlFor="stock_no">Stock Number *</Label>
+                                            <Label htmlFor="stock_no ">Stock Number *</Label>
                                             <Input
                                                 id="stock_no"
                                                 name="stock_no"
@@ -77,22 +77,26 @@ export default function Create() {
                                                 min="1"
                                                 placeholder="Enter stock number"
                                                 required
+                                                className="bg-background"
                                             />
                                             <InputError message={errors.stock_no} />
                                         </div>
-                                         <div className="space-y-2">
+                                        <div className="space-y-2">
                                             <Label htmlFor="unit">Unit *</Label>
-                                            <Input
-                                                id="unit"
-                                                name="unit"
-                                                type="text"
-                                                min="1"
-                                                placeholder="Enter unit"
-                                                required
-                                            />
-                                            <InputError message={errors.quantity} />
+                                            <Select name="unit">
+                                                <SelectTrigger className="w-full bg-background">
+                                                    <SelectValue placeholder="Select Unit" />
+                                                </SelectTrigger>
+                                                <SelectContent >
+                                                    <SelectItem value="pc">Pc</SelectItem>
+                                                    <SelectItem value="box">Box</SelectItem>
+                                                    <SelectItem value="pack">Pack</SelectItem>
+                                                    <SelectItem value="stock">Stock</SelectItem>
+                                                    <SelectItem value="liter">Liter</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError message={errors.unit} />
                                         </div>
-
                                         <div className="space-y-2">
                                             <Label htmlFor="quantity">Quantity *</Label>
                                             <Input
@@ -102,10 +106,10 @@ export default function Create() {
                                                 min="1"
                                                 placeholder="Enter quantity"
                                                 required
+                                                className="bg-background"
                                             />
                                             <InputError message={errors.quantity} />
                                         </div>
-
                                         <div className="space-y-2">
                                             <Label htmlFor="unit_cost">Unit Cost *</Label>
                                             <Input
@@ -116,24 +120,10 @@ export default function Create() {
                                                 min="0"
                                                 placeholder="0.00"
                                                 required
+                                                className="bg-background"
                                             />
                                             <InputError message={errors.unit_cost} />
                                         </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="total_cost">Total Cost *</Label>
-                                            <Input
-                                                id="total_cost"
-                                                name="total_cost"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder="0.00"
-                                                required
-                                            />
-                                            <InputError message={errors.total_cost} />
-                                        </div>
-
                                         <div className="space-y-2">
                                             <Label htmlFor="status">Status</Label>
                                             <Select name="status">
@@ -159,8 +149,18 @@ export default function Create() {
                                             <InputError message={errors.requested_date} />
                                         </div>
                                     </div>
-
-
+                                    <div className="space-y-2">
+                                        <Label htmlFor="purpose">Purpose *</Label>
+                                            <textarea
+                                                id="purpose"
+                                                name="purpose"
+                                                rows={4}
+                                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                placeholder="Enter detailed description of the item"
+                                                required
+                                            />
+                                        <InputError message={errors.item_description} />
+                                    </div>
                                     <div className="flex items-center gap-4 pt-4">
                                         <Button type="submit" disabled={processing}>
                                             {processing ? 'Creating...' : 'Create Purchase Request'}

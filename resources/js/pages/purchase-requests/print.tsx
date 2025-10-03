@@ -13,6 +13,8 @@ interface PurchaseRequest {
     total_cost: number;
     status: 'pending' | 'approved';
     requested_date: string;
+    unit: string;
+    purpose: string;
     user: {
         name: string;
         email: string;
@@ -128,7 +130,7 @@ export default function Print({ purchaseRequest }: Props) {
                                 <tbody>
                                     <tr className="hover:bg-gray-50 dark:hover:bg-zinc-700 border-black border"  style={{ height: '100%' }}>
                                         <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{purchaseRequest.stock_no}</td>
-                                        <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">pc</td>
+                                        <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{purchaseRequest.unit}</td>
                                         <td className="border border-black dark:border-zinc-600 p-2 text-black dark:text-white align-top">
                                             <div className="whitespace-pre-line leading-relaxed h-full flex items-start text-xs">{purchaseRequest.item_description}</div>
                                         </td>
@@ -148,7 +150,7 @@ export default function Print({ purchaseRequest }: Props) {
                             <div className="flex">
                                 <span className="font-semibold mr-2  text-black dark:text-white">Purpose:</span>
                                 <div className="flex-1 min-h-[50px] p-1 dark:border-zinc-600 text-xs text-black dark:text-white">
-                                    Procurement of items as specified in the purchase request
+                                    {purchaseRequest.purpose}
                                 </div>
                             </div>
                         </div>

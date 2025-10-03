@@ -41,12 +41,14 @@ class PurchaseRequestController extends Controller
             'stock_no' => 'required|integer|min:1',
             'item_description' => 'required|string|max:1000',
             'quantity' => 'required|integer|min:1',
+            'unit' => 'required|string',
             'unit_cost' => 'required|numeric|min:0',
-            'total_cost' => 'required|numeric|min:0',
             'status' => 'sometimes|in:pending,approved',
             'requested_date' => 'required|date',
+            'purpose' => 'required|string',
         ]);
 
+        $validated['total_cost'] = $validated['quantity'] * $validated['unit_cost'];
         $purchaseRequest = new PurchaseRequest($validated);
         $purchaseRequest->user_id = Auth::id();
         $purchaseRequest->pr_number = $purchaseRequest->generatePrNumber();
@@ -88,11 +90,12 @@ class PurchaseRequestController extends Controller
             'item_description' => 'required|string|max:1000',
             'quantity' => 'required|integer|min:1',
             'unit_cost' => 'required|numeric|min:0',
-            'total_cost' => 'required|numeric|min:0',
+            'purpose' => 'required|string',
+            'unit' => 'required|string',
             'status' => 'sometimes|in:pending,approved',
             'requested_date' => 'required|date',
         ]);
-
+        $validated['total_cost'] = $validated['quantity'] * $validated['unit_cost'];
         $purchaseRequest->update($validated);
 
         return redirect()->route('purchase-requests.index')
