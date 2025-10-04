@@ -35,17 +35,29 @@ class HandleInertiaRequests extends Middleware
      * @return array<string, mixed>
      */
     public function share(Request $request): array
-    {
-        [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+{
+    [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
-        return [
-            ...parent::share($request),
-            'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
-            'auth' => [
-                'user' => $request->user(),
-            ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-        ];
-    }
+    return [
+        ...parent::share($request),
+
+        'name' => config('app.name'),
+        'quote' => [
+            'message' => trim($message),
+            'author' => trim($author),
+        ],
+        'auth' => [
+            'user' => $request->user(),
+        ],
+        'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+        // 👇 Flash messages for React-Toastify
+        'flash' => [
+            'success' => fn () => $request->session()->get('success'),
+            'error'   => fn () => $request->session()->get('error'),
+            'info'    => fn () => $request->session()->get('info'),
+        ],
+    ];
+}
+
 }

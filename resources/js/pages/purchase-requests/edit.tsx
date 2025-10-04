@@ -1,6 +1,7 @@
 import { Head, Form } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,7 +54,6 @@ export default function Edit({ purchaseRequest }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Edit Purchase Request - ${purchaseRequest.pr_number}`} />
-
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm" asChild>

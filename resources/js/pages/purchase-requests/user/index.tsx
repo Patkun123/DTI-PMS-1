@@ -12,17 +12,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+
 import { Plus, Eye, Edit, Trash2, Printer, MoreHorizontal, ChevronDown, ArrowUpDown } from "lucide-react"
 
 import AppLayout from "@/layouts/app-layout"
@@ -55,8 +45,6 @@ import {
   show as purchaseRequestsShow,
   edit as purchaseRequestsEdit,
 } from "@/routes/purchase-requests"
-import { router } from "@inertiajs/react"
-import { toast } from "react-toastify"
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -179,69 +167,28 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
                 <Eye className="h-4 w-4" /> View
               </Link>
             </DropdownMenuItem>
-                {["user", "admin"].includes(authUser?.role) && pr.status === "approved" && (
-                    <DropdownMenuItem asChild>
-                        <a
-                        href={`/purchase-requests/${pr.id}/print`}
-                        target="_blank"
-                        className="flex items-center gap-2"
-                        >
-                        <Printer className="h-4 w-4" /> Print
-                        </a>
-                    </DropdownMenuItem>
-                )}
-                {["user", "admin"].includes(authUser?.role) && pr.status !== "approved" && (
-                    <DropdownMenuItem asChild>
-                        <Link href={purchaseRequestsEdit(pr.id).url} className="flex items-center gap-2">
-                        <Edit className="h-4 w-4" /> Edit
-                        </Link>
-                    </DropdownMenuItem>
-                )}
-                {pr.status !== "approved" && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                    <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600 cursor-pointer"
-                        onSelect={(e) => e.preventDefault()} // prevent immediate close
+             {authUser?.role === "user" && pr.status === "approved" && (
+                <DropdownMenuItem asChild>
+                    <a
+                    href={`/purchase-requests/${pr.id}/print`}
+                    target="_blank"
+                    className="flex items-center gap-2"
                     >
-                        <Trash2 className="h-4 w-4" /> Delete
-                    </DropdownMenuItem>
-                    </AlertDialogTrigger>
-
-                    <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Purchase Request?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                        This action cannot be undone. Are you sure you want to permanently
-                        delete this purchase request?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => {
-                            if (pr.status === "approved") {
-                            toast.error("❌ Cannot delete an approved request");
-                            return;
-                            }
-                            router.delete(`/purchase-requests/${pr.id}`, {
-                            onSuccess: () => {
-                                toast.success("Purchase request deleted successfully!");
-                            },
-                            onError: () => {
-                                toast.error("⚠️ Failed to delete purchase request");
-                            },
-                            });
-                        }}
-                        >
-                        Yes, Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                )}
+                    <Printer className="h-4 w-4" /> Print
+                    </a>
+                </DropdownMenuItem>
+            )}
+            <DropdownMenuItem asChild>
+              <Link href={purchaseRequestsEdit(pr.id).url} className="flex items-center gap-2">
+                <Edit className="h-4 w-4" /> Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onClick={() => console.log("Delete action for", pr.id)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

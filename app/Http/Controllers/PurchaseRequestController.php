@@ -15,10 +15,15 @@ class PurchaseRequestController extends Controller
      */
     public function index(): Response
     {
-        $purchaseRequests = PurchaseRequest::with('user')
-            ->latest()
-            ->paginate(10);
+        $user = Auth::user();
 
+        if($user->role === 'user'){
+            $purchaseRequests = PurchaseRequest::where('user_id', $user->id)
+                ->with('user')
+                ->paginate(10);
+        }else{
+            $purchaseRequests = PurchaseRequest::with('user')->paginate(10);
+        }
         return Inertia::render('purchase-requests/index', [
             'purchaseRequests' => $purchaseRequests,
         ]);
@@ -109,8 +114,7 @@ class PurchaseRequestController extends Controller
     {
         $purchaseRequest->delete();
 
-        return redirect()->route('purchase-requests.index')
-            ->with('success', 'Purchase request deleted successfully.');
+        return redirect()->route('purchase-requests.index');
     }
 
     /**
