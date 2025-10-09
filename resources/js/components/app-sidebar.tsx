@@ -14,7 +14,7 @@ import { dashboard, userdashboard, usermanagementindex, } from '@/routes';
 import { index as purchaseRequestsIndex } from '@/routes/purchase-requests';
 import { type NavItem, type PageProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, ShoppingCart, BookmarkCheck, Users, Settings } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, ShoppingCart, BookmarkCheck, Users, Settings, ScrollText } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -28,6 +28,16 @@ export function AppSidebar() {
             title: 'Dashboard',
             href: userdashboard(),
             icon: LayoutGrid,
+        },
+        {
+            title: 'Purchase Requests',
+            href: purchaseRequestsIndex(),
+            icon: ShoppingCart,
+        },
+        {
+            title: 'Reports',
+            href: purchaseRequestsIndex(),
+            icon: ScrollText,
         },
     ];
 

@@ -159,7 +159,8 @@ export default function Print({ purchaseRequest }: Props) {
                                 <div className="flex">
                                     <span className="font-semibold mr-2  text-black dark:text-white">Purpose:</span>
                                     <div className="flex-1 min-h-[50px] p-1 dark:border-zinc-600 text-xs text-black dark:text-white">
-                                        {purchaseRequest.purpose}
+                                        {purchaseRequest.purpose}br
+                                        <div className='mt-5'><span>PPMP Ref.Code :</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -184,7 +185,7 @@ export default function Print({ purchaseRequest }: Props) {
                                 <div className="col-span-2 p-2 text-center">
                                     <div className="mb-3 font-semibold text-black dark:text-white text-start">Approved By:</div>
                                     <br />
-                                    <span className="text-center font-semibold text-xs">FLORA D. POLITUD-GABUNALES, CESO V</span>
+                                    <span className="text-center font-semibold text-xs">FLORA D. POLITUD-GABUNALES, CESO V</span>br
                                     <span className="text-sm"> Regional Director</span>
                                 </div>
                             </div>

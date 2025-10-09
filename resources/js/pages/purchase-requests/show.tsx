@@ -134,7 +134,7 @@ export default function Show({ purchaseRequest }: Props) {
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
+                Approved
               </Button>
             )}
           </div>
