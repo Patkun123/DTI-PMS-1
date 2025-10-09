@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('requester');
             $table->string('position');
+            $table->string('division');
             $table->rememberToken();
             $table->timestamps();
         });

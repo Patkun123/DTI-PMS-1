@@ -1,5 +1,5 @@
-import { Head, Link, usePage } from "@inertiajs/react";
-import { ArrowLeft, Edit, Calendar, User, Printer } from "lucide-react";
+import { Head, Link, usePage, router } from "@inertiajs/react";
+import { ArrowLeft, Edit, Calendar, User, Printer, CheckCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,24 +13,31 @@ import {
   edit as purchaseRequestsEdit,
 } from "@/routes/purchase-requests";
 
-interface PurchaseRequest {
+interface PurchaseRequestItem {
   id: number;
-  pr_number: string;
-  stock_no: number;
   item_description: string;
+  stock_no: number;
+  unit: string;
   quantity: number;
   unit_cost: number;
   total_cost: number;
-  purpose: string;
-  unit: string;
+}
+
+interface PurchaseRequest {
+  id: number;
+  pr_number: string;
+  ris_number: string;
   status: "pending" | "approved";
   requested_date: string;
+  purpose: string;
+  ris_status: string;
   user: {
     name: string;
     email: string;
   };
   created_at: string;
   updated_at: string;
+  items: PurchaseRequestItem[];
 }
 
 interface Props {
@@ -63,6 +70,13 @@ export default function Show({ purchaseRequest }: Props) {
     },
   ];
 
+  // 🔹 Approve handler (for admin only)
+  const handleApprove = () => {
+    if (confirm("Are you sure you want to approve this Purchase Request?")) {
+      router.post(`/purchase-requests/${purchaseRequest.id}/approve`);
+    }
+  };
+
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={`Purchase Request - ${purchaseRequest.pr_number}`} />
@@ -78,31 +92,51 @@ export default function Show({ purchaseRequest }: Props) {
           </Button>
 
           <div className="flex items-center gap-2">
-            {/* Print (for approved requests only) */}
-            {userRole &&
-              ["admin", "user"].includes(userRole) &&
-              purchaseRequest.status === "approved" && (
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={`/purchase-requests/${purchaseRequest.id}/print`}
-                    target="_blank"
-                  >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
-                  </a>
-                </Button>
-              )}
+            {/* Print button */}
+            {purchaseRequest.ris_status === "with" ? (
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href={`/purchase-requests/${purchaseRequest.id}/print-with-ris`}
+                  target="_blank"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print with RIS
+                </a>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href={`/purchase-requests/${purchaseRequest.id}/print`}
+                  target="_blank"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </a>
+              </Button>
+            )}
 
-            {/* Edit (admin only, not approved) */}
-            {userRole === "admin" &&
-              purchaseRequest.status !== "approved" && (
-                <Link href={purchaseRequestsEdit(purchaseRequest.id).url}>
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </Link>
-              )}
+            {/* Edit button (admin only) */}
+            {userRole === "admin" && purchaseRequest.status !== "approved" && (
+              <Link href={purchaseRequestsEdit(purchaseRequest.id).url}>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              </Link>
+            )}
+
+            {/* ✅ Approve button (admin only, not approved yet) */}
+            {userRole === "admin" && purchaseRequest.status !== "approved" && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleApprove}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            )}
           </div>
         </div>
 
@@ -112,13 +146,16 @@ export default function Show({ purchaseRequest }: Props) {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between border-b border-forebackground">
                   <div>
                     <CardTitle className="text-xl">
-                      {purchaseRequest.item_description}
+                      {purchaseRequest.pr_number}
                     </CardTitle>
-                    <p className="text-muted-foreground mt-1">
-                      PR Number: {purchaseRequest.pr_number}
+                    <p className="text-muted-foreground mt-1 mb-2">
+                      PR Number
+                    </p>
+                    <p className="text-muted-foreground mt-1 mb-2">
+                      RIS number : {purchaseRequest.ris_number || "None"}
                     </p>
                   </div>
                   <Badge variant={getStatusColor(purchaseRequest.status)}>
@@ -130,46 +167,52 @@ export default function Show({ purchaseRequest }: Props) {
 
               <CardContent className="space-y-4">
                 <h3 className="font-medium mb-2">Item Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Stock Number
-                    </p>
-                    <p className="font-medium">{purchaseRequest.stock_no}</p>
-                  </div>
 
-                  <div>
-                    <p className="text-sm text-muted-foreground">Unit</p>
-                    <p className="font-medium">{purchaseRequest.unit}</p>
+                {purchaseRequest.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-2 gap-4 mb-4 border-b border-secondary"
+                  >
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Item Description
+                      </p>
+                      <p className="font-medium">{item.item_description}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Stock Number
+                      </p>
+                      <p className="font-medium">{item.stock_no}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Unit</p>
+                      <p className="font-medium">{item.unit}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Quantity</p>
+                      <p className="font-medium">{item.quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Unit Cost</p>
+                      <p className="font-medium">
+                        ₱
+                        {item.unit_cost.toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Cost</p>
+                      <p className="font-medium text-green-600 dark:text-green-400 mb-4">
+                        ₱
+                        {item.total_cost.toLocaleString("en-PH", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
                   </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Quantity</p>
-                    <p className="font-medium">{purchaseRequest.quantity}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Unit Cost</p>
-                    <p className="font-medium">
-                      ₱
-                      {purchaseRequest.unit_cost.toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Total Cost</p>
-                    <p className="font-medium text-lg text-green-600 dark:text-green-400">
-                      ₱
-                      {purchaseRequest.total_cost.toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                <Separator className="my-4" />
+                ))}
 
                 <div>
                   <h3 className="font-medium mb-2">Purpose</h3>
@@ -208,7 +251,9 @@ export default function Show({ purchaseRequest }: Props) {
                 <div className="flex items-center gap-3">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Requested By</p>
+                    <p className="text-sm text-muted-foreground">
+                      Requested By
+                    </p>
                     <p className="font-medium">{purchaseRequest.user.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {purchaseRequest.user.email}
@@ -221,18 +266,14 @@ export default function Show({ purchaseRequest }: Props) {
                 <div>
                   <p className="text-sm text-muted-foreground">Created</p>
                   <p className="font-medium">
-                    {new Date(
-                      purchaseRequest.created_at
-                    ).toLocaleDateString()}
+                    {new Date(purchaseRequest.created_at).toLocaleDateString()}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-sm text-muted-foreground">Last Updated</p>
                   <p className="font-medium">
-                    {new Date(
-                      purchaseRequest.updated_at
-                    ).toLocaleDateString()}
+                    {new Date(purchaseRequest.updated_at).toLocaleDateString()}
                   </p>
                 </div>
               </CardContent>

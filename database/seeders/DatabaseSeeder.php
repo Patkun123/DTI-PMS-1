@@ -22,9 +22,10 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Administrative Financial Management Division',
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
-                'role' => 'admin',
+                'role' => 'user',
                 'requester' => 'HAZEL E. HAUTEA',
                 'position'=> 'Chief Administrative Officer',
+                'division' => 'AFMD'
             ]
         );
         User::firstOrCreate(
@@ -36,17 +37,43 @@ class DatabaseSeeder extends Seeder
                 'role' => 'user',
                 'requester' => 'Elbert Capecio',
                 'position'=> 'Consumer Protection Chief',
+                'division' => 'CPD'
             ]
         );
         User::firstOrCreate(
             ['email' => 'sdd@dti.com'],
             [
-                'name' => 'SME DEVELOPMENT DIVISION',
+                'name' => 'Sme Development Division',
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
                 'role' => 'user',
                 'requester' => 'DAGNY A. MARTIRIZAR',
                 'position'=> 'OIC, Industrial Department Division Chief',
+                'division' => 'SDD'
+            ]
+        );
+        User::firstOrCreate(
+            ['email' => 'sdd@dti.com'],
+            [
+                'name' => 'Sme Development Division',
+                'password' => Hash::make('dti12345'),
+                'email_verified_at' => now(),
+                'role' => 'user',
+                'requester' => 'DAGNY A. MARTIRIZAR',
+                'position'=> 'OIC, Industrial Department Division Chief',
+                'division' => 'SDD'
+            ]
+        );
+        User::firstOrCreate(
+            ['email' => 'procurementunit@dti.com'],
+            [
+                'name' => 'Administrator',
+                'password' => Hash::make('admin12345'),
+                'email_verified_at' => now(),
+                'role' => 'admin',
+                'requester' => 'Admin',
+                'position'=> 'Procurement Unit',
+                'division' => 'admin-AFMD'
             ]
         );
 

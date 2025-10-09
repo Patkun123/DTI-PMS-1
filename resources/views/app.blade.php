@@ -18,7 +18,6 @@
                 }
             })();
         </script>
-
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
@@ -32,9 +31,9 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="/images/logo2.ico" sizes="any">
+        <link rel="icon" href="/images/dtilogo.svg" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="/DTI_PH-01.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

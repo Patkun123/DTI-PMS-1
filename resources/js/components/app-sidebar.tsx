@@ -10,11 +10,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, userdashboard } from '@/routes';
+import { dashboard, userdashboard, usermanagementindex, } from '@/routes';
 import { index as purchaseRequestsIndex } from '@/routes/purchase-requests';
 import { type NavItem, type PageProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, ShoppingCart } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, ShoppingCart, BookmarkCheck, Users, Settings } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -28,11 +28,6 @@ export function AppSidebar() {
             title: 'Dashboard',
             href: userdashboard(),
             icon: LayoutGrid,
-        },
-        {
-            title: 'Purchase Requests',
-            href: purchaseRequestsIndex(),
-            icon: ShoppingCart,
         },
     ];
 
@@ -49,30 +44,41 @@ export function AppSidebar() {
                 title: 'Purchase Requests',
                 href: purchaseRequestsIndex(),
                 icon: ShoppingCart,
+            },
+            {
+                title: 'User',
+                href: usermanagementindex(),
+                icon: Users,
             }
         );
     }
-
     const footerNavItems: NavItem[] = [
         {
-            title: 'Repository',
+            title: 'About System',
             href: 'https://github.com/laravel/react-starter-kit',
-            icon: Folder,
-        },
-        {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#react',
             icon: BookOpen,
         },
+        // {
+        //     title: 'Documentation',
+        //     href: 'https://laravel.com/docs/starter-kits#react',
+        //     icon: BookOpen,
+        // },
     ];
-
+        if (userRole === 'admin')
+            {
+            footerNavItems.unshift({
+            title: 'System Settings',
+            href: 'https://laravel.com/docs',
+            icon: Settings,
+        });
+    }
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboard()} prefetch className='bg-background'>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

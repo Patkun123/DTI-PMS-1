@@ -16,6 +16,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Purchase Request routes
     Route::resource('purchase-requests', App\Http\Controllers\PurchaseRequestController::class);
     Route::get('purchase-requests/{purchaseRequest}/print', [App\Http\Controllers\PurchaseRequestController::class, 'print'])->name('purchase-requests.print');
+    Route::get('purchase-requests/{purchaseRequest}/print-with-ris', [App\Http\Controllers\PurchaseRequestController::class, 'printwithris'])->name('requisitions.print');
+    Route::post('/purchase-requests/{purchaseRequest}/approve', [App\Http\Controllers\PurchaseRequestController::class, 'approve'])
+    ->middleware(['auth', 'verified'])
+    ->name('purchase-requests.approve');
+
+    // Route::resource('user-management', App\Http\Controllers\UserController::class);
+    Route::get('user-management/index', [App\Http\Controllers\Usermanagement::class, 'index'])->name('usermanagementindex');
 });
 
 //user

@@ -68,6 +68,24 @@ export default function Profile({
                                         message={errors.name}
                                     />
                                 </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="requester">Chief Requester</Label>
+
+                                    <Input
+                                        id="requester"
+                                        className="mt-1 block w-full"
+                                        defaultValue={auth.user.requester}
+                                        name="requester"
+                                        required
+                                        autoComplete="requester"
+                                        placeholder="Full name of Chief"
+                                    />
+
+                                    <InputError
+                                        className="mt-2"
+                                        message={errors.name}
+                                    />
+                                </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email address</Label>

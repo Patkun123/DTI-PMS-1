@@ -15,17 +15,15 @@ return new class extends Migration
             $table->id();
             $table->string('pr_number')->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->integer('stock_no');
-            $table->string('unit');
-            $table->longText('item_description');
-            $table->integer('quantity');
-            $table->decimal('unit_cost', 15, 2);
-            $table->decimal('total_cost', 15, 2);
             $table->string('purpose')->nullable();
+            $table->string('division')->nullable();
             $table->enum('status', ['pending', 'approved'])->default('pending');
             $table->date('requested_date');
+            $table->string('ris_status')->default('none');
+            $table->string('ris_number')->unique()->nullable();
             $table->timestamps();
         });
+
     }
 
     /**

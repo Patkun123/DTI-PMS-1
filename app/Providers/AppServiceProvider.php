@@ -6,6 +6,10 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    protected $policies = [
+    \App\Models\PurchaseRequest::class => \App\Policies\PurchaseRequestPolicy::class,
+    ];
+
     /**
      * Register any application services.
      */

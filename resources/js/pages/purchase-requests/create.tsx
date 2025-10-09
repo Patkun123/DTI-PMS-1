@@ -1,9 +1,10 @@
-import { Head, Form } from '@inertiajs/react';
+import { Head, Form, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -11,11 +12,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import InputError from '@/components/input-error';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { index as purchaseRequestsIndex, create as purchaseRequestsCreate, store as purchaseRequestsStore } from '@/routes/purchase-requests';
+import React from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -29,10 +31,45 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Create() {
+    const { data, setData, post, processing, errors } = useForm({
+        requested_date: new Date().toISOString().split('T')[0], // Default to today
+        purpose: '',
+        ris_status: '',
+        items: [{
+            item_description: '',
+            unit: '',
+            quantity: 1,
+            unit_cost: 1,
+        }],
+    });
+
+    const addItem = () => {
+        setData('items', [...data.items, {
+            item_description: '',
+            unit: '',
+            quantity: 1,
+            unit_cost: 0,
+        }]);
+    };
+
+    const removeItem = (index: number) => {
+        if (window.confirm('Are you sure you want to remove this item?')) {
+            setData('items', data.items.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(purchaseRequestsStore().url, {
+            onSuccess: () => toast.success('Purchase request created successfully!'),
+            onError: () => toast.error('Failed to create purchase request'),
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create Purchase Request" />
-
+            <ToastContainer />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm" asChild>
@@ -51,43 +88,81 @@ export default function Create() {
                         <Form
                             action={purchaseRequestsStore().url}
                             method="post"
-                            className="space-y-6"
-                        >
-                            {({ processing, errors }) => (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="item_description">Item Description *</Label>
-                                            <textarea
-                                                id="item_description"
-                                                name="item_description"
-                                                rows={4}
-                                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                placeholder="Enter detailed description of the item"
-                                                required
-                                            />
-                                        <InputError message={errors.item_description} />
+                            className="space-y-6">
+                            {/* Requested Date */}
+                            <div>
+                                <Label htmlFor="requested_date">Requested Date</Label>
+                                <Input
+                                    id="requested_date"
+                                    type="date"
+                                    name="requested_date"
+                                    value={data.requested_date}
+                                    onChange={(e) => setData('requested_date', e.target.value)}
+                                    required
+                                />
+                                <InputError message={errors.requested_date} />
+                            </div>
+                            <div>
+                                <Label htmlFor="ris_status">with RIS</Label>
+                                <Select name="ris_status">
+                                    <SelectTrigger className="w-full bg-background">
+                                        <SelectValue placeholder="Select RIS" />
+                                    </SelectTrigger>
+                                        <SelectContent >
+                                            <SelectItem value="with">With</SelectItem>
+                                            <SelectItem value="none">None</SelectItem>
+                                        </SelectContent>
+                                </Select>
+                                <InputError message={errors.ris_status} />
+                            </div>
+
+                            {/* Purpose */}
+                            <div>
+                                <Label htmlFor="purpose">Purpose</Label>
+                                <Textarea
+                                    id="purpose"
+                                    name="purpose"
+                                    value={data.purpose}
+                                    onChange={(e) => setData('purpose', e.target.value)}
+                                    placeholder="Enter the purpose of the purchase request"
+                                    required
+                                />
+                                <InputError message={errors.purpose} />
+                            </div>
+
+                            {/* Items */}
+                            {data.items.map((item, index) => (
+                                <div key={index} className="h-full mb-2">
+                                    <div className="mb-5">
+                                        <Label htmlFor={`item_description_${index}`}>Item Description</Label>
+                                        <Textarea
+                                            id={`item_description_${index}`}
+                                            name={`items[${index}][item_description]`}
+                                            value={item.item_description}
+                                            onChange={(e) => setData('items', data.items.map((i, idx) =>
+                                                idx === index ? { ...i, item_description: e.target.value } : i
+                                            ))}
+                                            placeholder="Item description"
+                                            required
+
+                                        />
+                                        <InputError message={errors[`items.${index}.item_description`]} />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="stock_no ">Stock Number *</Label>
-                                            <Input
-                                                id="stock_no"
-                                                name="stock_no"
-                                                type="number"
-                                                min="1"
-                                                placeholder="Enter stock number"
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+                                        <div>
+                                            <Label htmlFor={`unit_${index}`}>Unit</Label>
+                                            <Select
+                                                name={`items[${index}][unit]`}
+                                                value={item.unit}
+                                                onValueChange={(value) => setData('items', data.items.map((i, idx) =>
+                                                    idx === index ? { ...i, unit: value } : i
+                                                ))}
                                                 required
-                                                className="bg-background"
-                                            />
-                                            <InputError message={errors.stock_no} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="unit">Unit *</Label>
-                                            <Select name="unit">
-                                                <SelectTrigger className="w-full bg-background">
-                                                    <SelectValue placeholder="Select Unit" />
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select unit" />
                                                 </SelectTrigger>
-                                                <SelectContent >
+                                                <SelectContent>
                                                     <SelectItem value="pc">Pc</SelectItem>
                                                     <SelectItem value="box">Box</SelectItem>
                                                     <SelectItem value="pack">Pack</SelectItem>
@@ -95,82 +170,78 @@ export default function Create() {
                                                     <SelectItem value="liter">Liter</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <InputError message={errors.unit} />
+                                            <InputError message={errors[`items.${index}.unit`]} />
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="quantity">Quantity *</Label>
-                                            <Input
-                                                id="quantity"
-                                                name="quantity"
-                                                type="number"
-                                                min="1"
-                                                placeholder="Enter quantity"
-                                                required
-                                                className="bg-background"
-                                            />
-                                            <InputError message={errors.quantity} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="unit_cost">Unit Cost *</Label>
-                                            <Input
-                                                id="unit_cost"
-                                                name="unit_cost"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                placeholder="0.00"
-                                                required
-                                                className="bg-background"
-                                            />
-                                            <InputError message={errors.unit_cost} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="status">Status</Label>
-                                            <Select name="status">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="pending">Pending</SelectItem>
-                                                    <SelectItem value="approved">Approved</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError message={errors.status} />
-                                        </div>
+                                        <Input
+                                            id={`stock_no_${index}`}
+                                            type="number"
+                                            name={`items[${index}][stock_no]`}
+                                            value={index + 1}
+                                            readOnly
+                                            hidden
+                                        />
+                                    <div>
+                                        <Label htmlFor={`quantity_${index}`}>Quantity</Label>
+                                        <Input
+                                            id={`quantity_${index}`}
+                                            type="number"
+                                            name={`items[${index}][quantity]`}
+                                            value={item.quantity}
+                                            onChange={(e) => setData('items', data.items.map((i, idx) =>
+                                                idx === index ? { ...i, quantity: Number(e.target.value) } : i
+                                            ))}
+                                            placeholder="Quantity"
+                                            min="1"
+                                            required
+                                        />
+                                        <InputError message={errors[`items.${index}.quantity`]} />
+                                    </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="requested_date">Requested Date *</Label>
-                                            <Input
-                                                id="requested_date"
-                                                name="requested_date"
-                                                type="date"
-                                                required
-                                            />
-                                            <InputError message={errors.requested_date} />
-                                        </div>
+                                    <div>
+                                        <Label htmlFor={`unit_cost_${index}`}>Unit Cost</Label>
+                                        <Input
+                                            id={`unit_cost_${index}`}
+                                            type="number"
+                                            name={`items[${index}][unit_cost]`}
+                                            value={item.unit_cost}
+                                            onChange={(e) => setData('items', data.items.map((i, idx) =>
+                                                idx === index ? { ...i, unit_cost: Number(e.target.value) } : i
+                                            ))}
+                                            placeholder="Unit Cost"
+                                            min="0"
+                                            step="0.01"
+                                            required
+                                        />
+                                        <InputError message={errors[`items.${index}.unit_cost`]} />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="purpose">Purpose *</Label>
-                                            <textarea
-                                                id="purpose"
-                                                name="purpose"
-                                                rows={4}
-                                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                placeholder="Enter detailed description of the item"
-                                                required
-                                            />
-                                        <InputError message={errors.item_description} />
-                                    </div>
-                                    <div className="flex items-center gap-4 pt-4">
-                                        <Button type="submit" disabled={processing}>
-                                            {processing ? 'Creating...' : 'Create Purchase Request'}
+
+                                    {data.items.length > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={() => removeItem(index)}
+                                            className="mt-8"
+                                        >
+                                            Remove
                                         </Button>
-                                        <Button variant="outline" type="button" asChild>
-                                            <a href={purchaseRequestsIndex().url}>Cancel</a>
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
+                                    )}
+                                </div>
+                                </div>
+                            ))}
+
+                            <div className="flex gap-4 mt-10 justify-end">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={addItem}
+                                    disabled={processing}
+                                >
+                                    Add Item
+                                </Button>
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? 'Creating...' : 'Create Purchase Request'}
+                                </Button>
+                            </div>
                         </Form>
                     </CardContent>
                 </Card>
@@ -178,4 +249,3 @@ export default function Create() {
         </AppLayout>
     );
 }
-
