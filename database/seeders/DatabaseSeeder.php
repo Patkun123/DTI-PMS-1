@@ -22,8 +22,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Administrative Financial Management Division',
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
-                'role' => 'user',
-                'requester' => 'HAZEL E. HAUTEA',
+                'role' => 'admin',
+                'requester' => 'Hazel E. Hautea',
                 'position'=> 'Chief Administrative Officer',
                 'division' => 'AFMD'
             ]
@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
                 'role' => 'user',
-                'requester' => 'Elbert Capecio',
+                'requester' => 'Elbert G. Capecio',
                 'position'=> 'Consumer Protection Chief',
                 'division' => 'CPD'
             ]
@@ -47,35 +47,35 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
                 'role' => 'user',
-                'requester' => 'DAGNY A. MARTIRIZAR',
-                'position'=> 'OIC, Industrial Department Division Chief',
+                'requester' => 'Ma. Theresa T. Chua',
+                'position'=> 'Sme Development Division Chief',
                 'division' => 'SDD'
             ]
         );
         User::firstOrCreate(
-            ['email' => 'sdd@dti.com'],
+            ['email' => 'idd@dti.com'],
             [
-                'name' => 'Sme Development Division',
+                'name' => 'Industry Development Division',
                 'password' => Hash::make('dti12345'),
                 'email_verified_at' => now(),
                 'role' => 'user',
-                'requester' => 'DAGNY A. MARTIRIZAR',
+                'requester' => 'Dagny A. Martirizar',
                 'position'=> 'OIC, Industrial Department Division Chief',
-                'division' => 'SDD'
+                'division' => 'IDD'
             ]
         );
-        User::firstOrCreate(
-            ['email' => 'procurementunit@dti.com'],
-            [
-                'name' => 'Administrator',
-                'password' => Hash::make('admin12345'),
-                'email_verified_at' => now(),
-                'role' => 'admin',
-                'requester' => 'Admin',
-                'position'=> 'Procurement Unit',
-                'division' => 'admin-AFMD'
-            ]
-        );
+        // User::firstOrCreate(
+        //     ['email' => 'procurementunit@dti.com'],
+        //     [
+        //         'name' => 'Administrator',
+        //         'password' => Hash::make('admin12345'),
+        //         'email_verified_at' => now(),
+        //         'role' => 'admin',
+        //         'requester' => 'Admin',
+        //         'position'=> 'Procurement Unit',
+        //         'division' => 'admin-AFMD'
+        //     ]
+        // );
 
         $this->call([
             PurchaseRequestSeeder::class,

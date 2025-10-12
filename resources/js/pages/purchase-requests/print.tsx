@@ -142,8 +142,8 @@ export default function Print({ purchaseRequest }: Props) {
                                                 <div className="whitespace-pre-line leading-relaxed h-full flex items-start text-xs">{item.item_description}</div>
                                             </td>
                                             <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{item.quantity}</td>
-                                            <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{item.unit_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                            <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{item.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{Number(item.unit_cost).toLocaleString('en-PH', { minimumFractionDigits: 0 })}</td>
+                                            <td className="border border-black dark:border-zinc-600 p-2 text-left text-black dark:text-white align-top">{Number(item.total_cost).toLocaleString('en-PH', { minimumFractionDigits: 0 })}</td>
                                         </tr>
                                         ))}
                                     </tbody>

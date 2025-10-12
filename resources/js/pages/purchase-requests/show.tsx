@@ -12,6 +12,9 @@ import {
   show as purchaseRequestsShow,
   edit as purchaseRequestsEdit,
 } from "@/routes/purchase-requests";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import * as React from "react"
+import { Input } from "@/components/ui/input"
 
 interface PurchaseRequestItem {
   id: number;
@@ -27,7 +30,8 @@ interface PurchaseRequest {
   id: number;
   pr_number: string;
   ris_number: string;
-  status: "pending" | "approved";
+  status: "ongoing" | "approved" | "completed" | "cancelled";
+  approved_date: string;
   requested_date: string;
   purpose: string;
   ris_status: string;
@@ -46,14 +50,73 @@ interface Props {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "pending":
-      return "secondary";
+    case "ongoing":
+      return "secondary"
     case "approved":
-      return "default";
+      return "default"
+    case "completed":
+        return "default"
     default:
-      return "secondary";
+      return "destructive"
   }
 };
+function ApproveDialog({ purchaseRequest }: Props) {
+  const [open, setOpen] = React.useState(false)
+  const [date, setDate] = React.useState("")
+
+  const handleSubmit = () => {
+    if (!date) {
+      alert("Please select a date.")
+      return
+    }
+
+    router.post(
+      `/purchase-requests/${purchaseRequest.id}/approve`,
+      { approved_date: date },
+      {
+        onSuccess: () => setOpen(false),
+      }
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="default"
+          size="sm"
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Approve
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Regional Director Approval</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <label className="text-sm font-medium">Approval Date:</label>
+          <Input
+          className="mt-2 mb-2"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>Submit</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 
 export default function Show({ purchaseRequest }: Props) {
   const { props } = usePage<PageProps>();
@@ -69,11 +132,14 @@ export default function Show({ purchaseRequest }: Props) {
       href: purchaseRequestsShow(purchaseRequest.id).url,
     },
   ];
-
-  // 🔹 Approve handler (for admin only)
   const handleApprove = () => {
     if (confirm("Are you sure you want to approve this Purchase Request?")) {
       router.post(`/purchase-requests/${purchaseRequest.id}/approve`);
+    }
+  };
+  const handleComplete = () => {
+    if (confirm("Are you sure you want to mark us complete this Purchase Request?")) {
+      router.post(`/purchase-requests/${purchaseRequest.id}/complete`);
     }
   };
 
@@ -93,7 +159,7 @@ export default function Show({ purchaseRequest }: Props) {
 
           <div className="flex items-center gap-2">
             {/* Print button */}
-            {purchaseRequest.ris_status === "with" ? (
+            {purchaseRequest.ris_status === "with" ? purchaseRequest.status !== 'cancelled' &&(
               <Button variant="outline" size="sm" asChild>
                 <a
                   href={`/purchase-requests/${purchaseRequest.id}/print-with-ris`}
@@ -116,7 +182,7 @@ export default function Show({ purchaseRequest }: Props) {
             )}
 
             {/* Edit button (admin only) */}
-            {userRole === "admin" && purchaseRequest.status !== "approved" && (
+            {userRole === "admin" && purchaseRequest.status !== "approved" && purchaseRequest.status !== "cancelled"  &&(
               <Link href={purchaseRequestsEdit(purchaseRequest.id).url}>
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4 mr-2" />
@@ -126,15 +192,20 @@ export default function Show({ purchaseRequest }: Props) {
             )}
 
             {/* ✅ Approve button (admin only, not approved yet) */}
-            {userRole === "admin" && purchaseRequest.status !== "approved" && (
+            {userRole === "admin" &&
+            !["approved", "cancelled", "complete"].includes(purchaseRequest.status) && (
+                <ApproveDialog purchaseRequest={purchaseRequest} />
+            )}
+
+            {userRole === "admin" && purchaseRequest.status !== "completed" &&  purchaseRequest.status === "approved" &&(
               <Button
                 variant="default"
                 size="sm"
-                onClick={handleApprove}
+                onClick={handleComplete}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Approved
+                Complete
               </Button>
             )}
           </div>
@@ -158,7 +229,12 @@ export default function Show({ purchaseRequest }: Props) {
                       RIS number : {purchaseRequest.ris_number || "None"}
                     </p>
                   </div>
-                  <Badge variant={getStatusColor(purchaseRequest.status)}>
+                  <Badge variant={getStatusColor(purchaseRequest.status)}
+                    className={
+                            getStatusColor(purchaseRequest.status) === "secondary"
+                            ? "bg-yellow-500 dark:text-black text-white hover:bg-yellow-600"
+                            : "bg-green-500 dark:text-black text-white hover:bg-green-600"
+                        }>
                     {purchaseRequest.status.charAt(0).toUpperCase() +
                       purchaseRequest.status.slice(1)}
                   </Badge>
@@ -196,19 +272,15 @@ export default function Show({ purchaseRequest }: Props) {
                     <div>
                       <p className="text-sm text-muted-foreground">Unit Cost</p>
                       <p className="font-medium">
-                        ₱
-                        {item.unit_cost.toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                        })}
+                        ₱ &nbsp;
+                        {Number(item.unit_cost).toLocaleString('en-PH', { minimumFractionDigits: 0 })}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Cost</p>
                       <p className="font-medium text-green-600 dark:text-green-400 mb-4">
-                        ₱
-                        {item.total_cost.toLocaleString("en-PH", {
-                          minimumFractionDigits: 2,
-                        })}
+                        ₱ &nbsp;
+                        {Number(item.total_cost).toLocaleString('en-PH', { minimumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>
@@ -276,6 +348,21 @@ export default function Show({ purchaseRequest }: Props) {
                     {new Date(purchaseRequest.updated_at).toLocaleDateString()}
                   </p>
                 </div>
+                <Separator />
+
+                <div>
+                    <p className="text-sm text-muted-foreground">
+                      Status
+                    </p>
+                    {purchaseRequest.status === 'cancelled' ?(
+                        <p className="font-medium text-destructive">{purchaseRequest.status.charAt(0).toUpperCase() + purchaseRequest.status.slice(1)}</p>
+                    ):(
+                        <p className="font-medium text-green-400">{purchaseRequest.status.charAt(0).toUpperCase() + purchaseRequest.status.slice(1)}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                     Approved at: {purchaseRequest.approved_date}
+                    </p>
+                  </div>
               </CardContent>
             </Card>
           </div>

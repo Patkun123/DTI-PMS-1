@@ -65,7 +65,7 @@ interface PurchaseRequestItem {
 interface PurchaseRequest {
   id: number
   pr_number: string
-  status: "pending" | "approved"
+  status: "completed" | "approved" | "ongoing" | "cancelled"
   requested_date: string
   purpose: string
   user: { name: string; email: string }
@@ -84,12 +84,14 @@ interface Props {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "pending":
+    case "ongoing":
       return "secondary"
     case "approved":
       return "default"
+    case "completed":
+        return "default"
     default:
-      return "secondary"
+      return "destructive"
   }
 }
 
@@ -128,10 +130,10 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
       return value.toLowerCase().includes(filterValue.toLowerCase())
     },
   },
-  {
-    accessorKey: "quantity",
-    header: "Quantity",
-  },
+//   {
+//     accessorKey: "quantity",
+//     header: "Quantity",
+//   },
   {
     accessorKey: "user.name",
     header: "Division",
@@ -146,9 +148,17 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => (
-      <Badge variant={getStatusColor(row.original.status)}>
+        <Badge
+        variant={getStatusColor(row.original.status)}
+        className={
+            getStatusColor(row.original.status) === "secondary"
+            ? "bg-yellow-500 dark:text-black text-white hover:bg-yellow-600"
+            : "bg-green-500 dark:text-black text-white hover:bg-green-600"
+        }
+        >
         {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
-      </Badge>
+        </Badge>
+
     ),
   },
   {
@@ -189,7 +199,7 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
                   <Eye className="h-4 w-4" /> View
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              {/* <DropdownMenuItem asChild>
                 <a
                   href={`/purchase-requests/${pr.id}/print`}
                   target="_blank"
@@ -197,7 +207,7 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
                 >
                   <Printer className="h-4 w-4" /> Print
                 </a>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem asChild>
                 <Link href={purchaseRequestsEdit(pr.id).url} className="flex items-center gap-2">
                   <Edit className="h-4 w-4" /> Edit

@@ -17,7 +17,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('purpose')->nullable();
             $table->string('division')->nullable();
-            $table->enum('status', ['pending', 'approved'])->default('pending');
+            $table->enum('status', ['ongoing', 'approved','cancelled','completed'])->default('ongoing');
+            $table->date('approved_date')->nullable();
             $table->date('requested_date');
             $table->string('ris_status')->default('none');
             $table->string('ris_number')->unique()->nullable();

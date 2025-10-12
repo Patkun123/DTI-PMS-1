@@ -19,7 +19,7 @@ class PurchaseRequestSeeder extends Seeder
                 [
                     'user_id' => 2,
                     'purpose' => 'Procurement of musical trainer and director services for DTI-12 Chorale Team',
-                    'status' => 'approved',
+                    'status' => 'cancelled',
                     'ris_status' => 'with',
                     'requested_date' => now()->subDays(5),
                     'items' => [
@@ -44,7 +44,7 @@ class PurchaseRequestSeeder extends Seeder
                 [
                     'user_id' => 1,
                     'purpose' => 'Office equipment upgrade project',
-                    'status' => 'approved',
+                    'status' => 'completed',
                     'ris_status' => 'none',
                     'requested_date' => now()->subDays(10),
                     'items' => [
@@ -61,7 +61,7 @@ class PurchaseRequestSeeder extends Seeder
                 [
                     'user_id' => 1,
                     'purpose' => 'Promotional materials for product launch campaign',
-                    'status' => 'pending',
+                    'status' => 'ongoing',
                     'ris_status' => 'with',
                     'requested_date' => now(),
                     'items' => [
@@ -103,7 +103,7 @@ class PurchaseRequestSeeder extends Seeder
                 [
                     'user_id' => 3,
                     'purpose' => 'Annual software license renewal',
-                    'status' => 'pending',
+                    'status' => 'ongoing',
                     'ris_status' => 'with',
                     'requested_date' => now()->subDays(15),
                     'items' => [

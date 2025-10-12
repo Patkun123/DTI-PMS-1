@@ -1,5 +1,6 @@
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
+import { NavSab } from '@/components/nav-sab';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
@@ -12,13 +13,26 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard, userdashboard, usermanagementindex, } from '@/routes';
 import { index as purchaseRequestsIndex } from '@/routes/purchase-requests';
+import { index as ppmpIndex } from '@/routes/ppmp';
 import { type NavItem, type PageProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, ShoppingCart, BookmarkCheck, Users, Settings, ScrollText } from 'lucide-react';
+import {
+  BookOpen,
+  LayoutGrid,
+  ShoppingCart,
+  Users,
+  BookmarkCheck,
+  ScrollText,
+  FileText,
+  BarChart3,
+  Settings,
+  ChevronRight,
+  FileChartColumn
+} from "lucide-react";
 import AppLogo from './app-logo';
 
+
 export function AppSidebar() {
-    // ✅ Type-safe Inertia props
     const { props } = usePage<PageProps>();
     const userRole = props.auth?.user?.role;
 
@@ -33,11 +47,6 @@ export function AppSidebar() {
             title: 'Purchase Requests',
             href: purchaseRequestsIndex(),
             icon: ShoppingCart,
-        },
-        {
-            title: 'Reports',
-            href: purchaseRequestsIndex(),
-            icon: ScrollText,
         },
     ];
 
@@ -56,12 +65,36 @@ export function AppSidebar() {
                 icon: ShoppingCart,
             },
             {
-                title: 'User',
+                title: 'User Management',
                 href: usermanagementindex(),
                 icon: Users,
-            }
+            },
+            {
+                title: 'PPMP Management',
+                href: ppmpIndex(),
+                icon: BookmarkCheck,
+            },
         );
     }
+
+    const reportItems : NavItem[] = [
+        {
+            title: "PR Reports",
+            href: usermanagementindex(),
+            icon: FileText,
+        },
+        {
+            title: "PMR Reports",
+            href: "/reports/ppmp",
+            icon: FileChartColumn,
+        },
+        {
+            title: "Analytics",
+            href: "/reports/ppmp",
+            icon: BarChart3,
+        },
+    ];
+
     const footerNavItems: NavItem[] = [
         {
             title: 'About System',
@@ -98,6 +131,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavSab items={reportItems} />
             </SidebarContent>
 
             <SidebarFooter>

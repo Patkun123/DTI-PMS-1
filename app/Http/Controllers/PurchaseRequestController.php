@@ -18,81 +18,76 @@ class PurchaseRequestController extends Controller
      * Display a listing of the resource.
      */
     public function index(): Response
-{
-    $user = Auth::user();
+    {
+        $user = Auth::user();
 
-    // Build base query with relationships
-    $query = PurchaseRequest::with(['user', 'items']);
+        // Build base query with relationships
+        $query = PurchaseRequest::with(['user', 'items']);
 
-    // 🔹 Only show current user's requests if they're a regular user
-    if ($user->role === 'user') {
-        $query->where('user_id', $user->id);
+        // 🔹 Only show current user's requests if they're a regular user
+        if ($user->role === 'user') {
+            $query->where('user_id', $user->id);
+        }
+
+        // 🔹 Optional filter by division (from query string ?division=AFMD)
+        if (request()->has('division') && request('division') !== '') {
+            $query->whereHas('user', function ($q) {
+                $q->where('division', request('division'));
+            });
+        }
+
+        // 🔹 Fetch data
+        $purchaseRequests = $query->latest()->get();
+
+        // 🔹 Flatten items for the table
+        $flattened = $purchaseRequests->flatMap(function ($pr) {
+            return $pr->items->map(function ($item) use ($pr) {
+                return [
+                    'id' => $pr->id,
+                    'pr_number' => $pr->pr_number,
+                    'stock_no' => $item->stock_no,
+                    'item_description' => $item->item_description,
+                    'quantity' => $item->quantity,
+                    'unit_cost' => $item->unit_cost,
+                    'total_cost' => $item->quantity * $item->unit_cost,
+                    'status' => $pr->status,
+                    'requested_date' => $pr->requested_date,
+                    'user' => [
+                        'name' => $pr->user->name,
+                        'division' => $pr->user->division,
+                    ],
+                    'created_at' => $pr->created_at,
+                ];
+            });
+        })->values();
+        $page = request('page', 1);
+        $perPage = 7;
+        $paginator = new LengthAwarePaginator(
+            $flattened->forPage($page, $perPage),
+            $flattened->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        // 🔹 Return to Inertia with data and available divisions
+        $divisions = \App\Models\User::select('division')
+            ->distinct()
+            ->pluck('division')
+            ->filter()
+            ->values();
+
+        return Inertia::render('purchase-requests/index', [
+            'purchaseRequests' => [
+                'data' => $flattened, // 👈 send all
+                'total' => $flattened->count(),
+            ],
+            'divisions' => $divisions,
+            'filters' => [
+                'division' => request('division'),
+            ],
+        ]);
     }
-
-    // 🔹 Optional filter by division (from query string ?division=AFMD)
-    if (request()->has('division') && request('division') !== '') {
-        $query->whereHas('user', function ($q) {
-            $q->where('division', request('division'));
-        });
-    }
-
-    // 🔹 Fetch data
-    $purchaseRequests = $query->latest()->get();
-
-    // 🔹 Flatten items for the table
-    $flattened = $purchaseRequests->flatMap(function ($pr) {
-        return $pr->items->map(function ($item) use ($pr) {
-            return [
-                'id' => $pr->id,
-                'pr_number' => $pr->pr_number,
-                'stock_no' => $item->stock_no,
-                'item_description' => $item->item_description,
-                'quantity' => $item->quantity,
-                'unit_cost' => $item->unit_cost,
-                'total_cost' => $item->quantity * $item->unit_cost,
-                'status' => $pr->status,
-                'requested_date' => $pr->requested_date,
-                'user' => [
-                    'name' => $pr->user->name,
-                    'division' => $pr->user->division, // 👈 include division
-                ],
-                'created_at' => $pr->created_at,
-            ];
-        });
-    })->values();
-
-    // Optional: paginate manually
-    $page = request('page', 1);
-    $perPage = 7;
-    $paginator = new LengthAwarePaginator(
-        $flattened->forPage($page, $perPage),
-        $flattened->count(),
-        $perPage,
-        $page,
-        ['path' => request()->url(), 'query' => request()->query()]
-    );
-
-    // 🔹 Return to Inertia with data and available divisions
-    $divisions = \App\Models\User::select('division')
-        ->distinct()
-        ->pluck('division')
-        ->filter()
-        ->values();
-
-    return Inertia::render('purchase-requests/index', [
-        'purchaseRequests' => [
-            'data' => $paginator->items(),
-            'total' => $flattened->count(),
-        ],
-        'divisions' => $divisions, // 👈 send all unique divisions
-        'filters' => [
-            'division' => request('division'),
-        ],
-    ]);
-}
-
-
-
     /**
      * Show the form for creating a new resource.
      */
@@ -110,7 +105,7 @@ class PurchaseRequestController extends Controller
                 'requested_date' => 'required|date',
                 'purpose' => 'required|string',
                 'ris_status' => 'required|string|in:none,with',
-                'status' => 'sometimes|in:pending,approved',
+                'status' => 'sometimes|in:ongoing,approved,completed,cancelled',
                 'items' => 'required|array|min:1',
                 'items.*.stock_no' => 'required|integer|min:1',
                 'items.*.item_description' => 'required|string|max:1000',
@@ -129,7 +124,7 @@ class PurchaseRequestController extends Controller
                 'requested_date' => $validated['requested_date'],
                 'purpose' => $validated['purpose'],
                 'ris_status' => $validated['ris_status'],
-                'status' => $validated['status'] ?? 'pending',
+                'status' => $validated['status'] ?? 'ongoing',
                 'user_id' => $userId,
             ]);
 
@@ -158,9 +153,6 @@ class PurchaseRequestController extends Controller
                 ->route('purchase-requests.show', $purchaseRequest->id)
                 ->with('success', 'Purchase request created successfully.');
         }
-
-
-
     /**
      * Display the specified resource.
      */
@@ -182,13 +174,31 @@ class PurchaseRequestController extends Controller
             'purchaseRequest' => $purchaseRequest,
         ]);
     }
-    public function approve(PurchaseRequest $purchaseRequest)
+    public function approve(Request $request, PurchaseRequest $purchaseRequest)
+{
+    $validated = $request->validate([
+        'approved_date' => 'required|date',
+    ]);
+
+    if (in_array($purchaseRequest->status, [ 'cancelled', 'complete'])) {
+        return back()->with('error', 'This request cannot be approved.');
+    }
+
+    $purchaseRequest->update([
+        'status' => 'approved',
+        'approved_date' => $validated['approved_date'],
+    ]);
+
+    return back()->with('success', 'Purchase Request approved successfully.');
+}
+
+    public function complete(PurchaseRequest $purchaseRequest)
     {
         $this->authorize('approve', $purchaseRequest); // optional policy check
 
-        $purchaseRequest->update(['status' => 'approved']);
+        $purchaseRequest->update(['status' => 'completed']);
 
-        return redirect()->back()->with('success', 'Purchase Request approved successfully.');
+        return redirect()->back()->with('success', 'Purchase Request complete successfully.');
     }
 
     /**

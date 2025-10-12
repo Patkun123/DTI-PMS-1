@@ -18,6 +18,7 @@ class PurchaseRequest extends Model
         'ris_status',
         'ris_number',
         'status',
+        'approved_date',
         'requested_date',
     ];
 
