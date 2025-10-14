@@ -4,10 +4,12 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type BreadcrumbItem } from "@/types"
 import { create as Ppmpcreate, index as ppmpIndex } from "@/routes/ppmp"
+import { PpmpData } from "@/components/ppmp/table"
+
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: "Purchase Requests",
+    title: "Project Procurement Management Plan",
     href: ppmpIndex().url,
   },
 ]
@@ -25,10 +27,11 @@ export default function Index({ purchaseRequests }: any) {
           <Link href={Ppmpcreate().url}>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              New Request Plan
+              Add new plan
             </Button>
           </Link>
         </div>
+        <PpmpData />
       </div>
     </AppLayout>
   )

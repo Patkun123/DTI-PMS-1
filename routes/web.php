@@ -20,7 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //PPMP Route
     Route::resource('ppmp', App\Http\Controllers\PpmpController::class);
 
-        Route::get('/ppmp/print', function () {
+     Route::get('/ppmp/prints', function () {
         return inertia('ppmp/print');
     })->name('ppmp.print');
 
