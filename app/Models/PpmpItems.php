@@ -12,6 +12,7 @@ class PpmpItems extends Model
     use HasFactory;
     protected $table = 'ppmp_items';
     protected $fillable = [
+        'detail',
         'ppmp_detail_id',
         'type_project',
         'qty_size',

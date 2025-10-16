@@ -71,6 +71,7 @@ class PpmpController extends Controller
             'details' => 'required|array|min:1',
             'details.*.general_description' => 'required|string',
             'details.*.items' => 'required|array|min:1',
+            'details.*.items.*.detail' => 'required|string',
             'details.*.items.*.type_project' => 'required|string',
             'details.*.items.*.qty_size' => 'required|string',
             'details.*.items.*.recommended' => 'required|string',
@@ -112,6 +113,7 @@ class PpmpController extends Controller
 
                 foreach ($detailData['items'] as $itemData) {
                     PpmpItems::create([
+                        'detail' => $itemData['detail'],
                         'ppmp_detail_id' => $detail->id,
                         'type_project' => $itemData['type_project'],
                         'qty_size' => $itemData['qty_size'],

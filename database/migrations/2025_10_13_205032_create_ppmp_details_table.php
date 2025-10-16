@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('ppmp_id')
                 ->constrained('ppmp')
                 ->onDelete('cascade');
+            $table->string('ppmp_code');
             $table->timestamps();
         });
     }

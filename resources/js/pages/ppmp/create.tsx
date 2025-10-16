@@ -31,6 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 interface PpmpItem {
+    detail: string;
     type_project: string;
     qty_size: string;
     recommended: string;
@@ -65,6 +66,7 @@ export default function Create({ proposed_ppmp_no }: any) {
         details: [{
             general_description: '',
             items: [{
+                detail: '',
                 type_project: '',
                 qty_size: '',
                 recommended: '',
@@ -87,6 +89,7 @@ export default function Create({ proposed_ppmp_no }: any) {
             {
                 general_description: '',
                 items: [{
+                    detail: '',
                     type_project: '',
                     qty_size: '',
                     recommended: '',
@@ -113,6 +116,7 @@ export default function Create({ proposed_ppmp_no }: any) {
     const addItem = (detailIndex: number) => {
         const newDetails = [...data.details];
         newDetails[detailIndex].items.push({
+            detail: '',
             type_project: '',
             qty_size: '',
             recommended: '',
@@ -309,7 +313,16 @@ export default function Create({ proposed_ppmp_no }: any) {
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 <div>
-                                                    <Label className="text-xs">Type of Project</Label>
+                                                    <Label className="text-xs mb-2">Object of Expenditure</Label>
+                                                    <Input
+                                                        value={item.detail}
+                                                        onChange={(e) => updateItem(detailIndex, itemIndex, 'detail', e.target.value)}
+                                                        placeholder="Enter product details"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs mb-2">Type of Project</Label>
                                                     <Select
                                                         value={item.type_project}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'type_project', value)}
@@ -319,7 +332,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                             <SelectValue placeholder="Select type" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="Good">Good</SelectItem>
+                                                            <SelectItem value="Good">Goods</SelectItem>
                                                             <SelectItem value="Infrastructure">Infrastructure</SelectItem>
                                                             <SelectItem value="Consulting Service">Consulting Service</SelectItem>
                                                         </SelectContent>
@@ -327,7 +340,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Quantity/Size</Label>
+                                                    <Label className="text-xs mb-2">Quantity/Size</Label>
                                                     <Input
                                                         value={item.qty_size}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'qty_size', e.target.value)}
@@ -337,26 +350,33 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Recommended Mode</Label>
+                                                    <Label className="text-xs mb-2">Recommended Mode</Label>
                                                     <Select
                                                         value={item.recommended}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'recommended', value)}
                                                         required
+
                                                     >
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="w-full text-sm truncate">
                                                             <SelectValue placeholder="Select mode" />
                                                         </SelectTrigger>
-                                                        <SelectContent>
+                                                        <SelectContent >
                                                             <SelectItem value="Direct Contracting">Direct Contracting</SelectItem>
                                                             <SelectItem value="Direct Acquisition">Direct Acquisition</SelectItem>
                                                             <SelectItem value="Competitive Bidding">Competitive Bidding</SelectItem>
-                                                            <SelectItem value="Negotiated Procurement - Small Value">Small Value</SelectItem>
+                                                            <SelectItem value="Small Value Procurement">Negotiated Procurement - Small Value</SelectItem>
+                                                            <SelectItem value="Emergency Cases Procurement">Negotiated Procurement - Emergency Cases</SelectItem>
+                                                            <SelectItem value="Lease of Real Property and Venue">Negotiated Procurement - Lease of Real Property and Venue</SelectItem>
+                                                            <SelectItem value="Direct Retail Purchase of Petroleum, Oil and Lubricant and Online Subscriptions">Negotiated Procurement Direct Retail Purchase of Petroleum, Oil and Lubricant and Online Subscriptions</SelectItem>
+                                                            <SelectItem value="Scholarly or Artistic Work, Exclusive Technology and Media Service">Negotiated Procurement , Scholarly or Artistic Work, Exclusive Technology and Media Service</SelectItem>
+                                                            <SelectItem value="Direct Procurement for Science, Technology, and Innovation">Direct Procurement for Science, Technology, and Innovation</SelectItem>
+                                                            <SelectItem value="Purchase of Common-Use Supplies not available in the Procurement Service">Purchase of Common-Use Supplies not available in the Procurement Service</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">PPC</Label>
+                                                    <Label className="text-xs mb-2">Pre-Procurement Conference, if applicable</Label>
                                                     <Select
                                                         value={item.ppc}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'ppc', value)}
@@ -373,7 +393,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Start Activity</Label>
+                                                    <Label className="text-xs mb-2">Start Activity</Label>
                                                     <Input
                                                         type="date"
                                                         value={item.start_activity}
@@ -383,7 +403,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">End Activity</Label>
+                                                    <Label className="text-xs mb-2">End Activity</Label>
                                                     <Input
                                                         type="date"
                                                         value={item.end_activity}
@@ -393,7 +413,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Expected Delivery (MM/YYYY - MM/YYYY)</Label>
+                                                    <Label className="text-xs mb-2">Expected Delivery (MM/YYYY - MM/YYYY)</Label>
                                                     <Input
                                                         value={item.expected_delivery}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'expected_delivery', e.target.value)}
@@ -403,17 +423,35 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Source of Funds</Label>
-                                                    <Input
+                                                    <Label className="text-xs mb-2">Source of Funds</Label>
+                                                    <Select
                                                         value={item.source_funds}
-                                                        onChange={(e) => updateItem(detailIndex, itemIndex, 'source_funds', e.target.value)}
-                                                        placeholder="e.g., GAA"
+                                                        onValueChange={(value) => updateItem(detailIndex, itemIndex, 'source_funds', value)}
                                                         required
-                                                    />
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Source of Fund" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="otop">OTOP</SelectItem>
+                                                            <SelectItem value="ssf">Shared Service Facilities  Project</SelectItem>
+                                                            <SelectItem value="nc">Negosyo Center</SelectItem>
+                                                            <SelectItem value="carp">Carp</SelectItem>
+                                                            <SelectItem value="rf003">003 Regular Fund</SelectItem>
+                                                            <SelectItem value="rf001">001 Regular Fund</SelectItem>
+                                                            <SelectItem value="rf002">002 Regular Fund</SelectItem>
+                                                            <SelectItem value="rf004">004 Regular Fund</SelectItem>
+                                                            <SelectItem value="rapidgop">Rapid Gop</SelectItem>
+                                                            <SelectItem value="rapidlp">Rapid Lp</SelectItem>
+                                                            <SelectItem value="mssd">MSSD</SelectItem>
+                                                            <SelectItem value="afmdld">AFMD LD</SelectItem>
+                                                            <SelectItem value="afmdrr">AFMD RR</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Estimated Budget</Label>
+                                                    <Label className="text-xs mb-2">Estimated Budget</Label>
                                                     <Input
                                                         type="number"
                                                         step="0.01"
@@ -426,7 +464,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 {/* Per requirement, remove item total; grand total computed from estimated_budget */}
 
                                                 <div>
-                                                    <Label className="text-xs">Attached Support</Label>
+                                                    <Label className="text-xs mb-2">Attached Support</Label>
                                                     <Input
                                                         value={item.attached_support}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'attached_support', e.target.value)}
@@ -436,7 +474,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">PPMP Ref</Label>
+                                                    <Label className="text-xs mb-2">PPMP Ref</Label>
                                                     <Input
                                                         value={item.ppmp_ref}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'ppmp_ref', e.target.value)}
@@ -446,7 +484,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 </div>
 
                                                 <div className="md:col-span-3">
-                                                    <Label className="text-xs">Remarks</Label>
+                                                    <Label className="text-xs mb-2">Remarks</Label>
                                                     <Textarea
                                                         value={item.remarks}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'remarks', e.target.value)}

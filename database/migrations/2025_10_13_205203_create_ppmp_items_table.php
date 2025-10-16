@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('ppmp_detail_id')
                 ->constrained('ppmp_details')
                 ->onDelete('cascade');
-            $table->string('details');
+            $table->string('detail');
             $table->string('type_project');
             $table->string('qty_size');
             $table->string('recommended');
