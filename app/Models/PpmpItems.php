@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PpmpItems extends Model
 {
     use HasFactory;
-     protected $fillable = [
+    protected $table = 'ppmp_items';
+    protected $fillable = [
         'ppmp_detail_id',
         'type_project',
         'qty_size',
@@ -21,16 +22,14 @@ class PpmpItems extends Model
         'expected_delivery',
         'source_funds',
         'estimated_budget',
-        'total',
         'attached_support',
         'remarks',
         'ppmp_ref',
     ];
     protected $casts = [
-        'start_activity' => 'date',
-        'end_activity' => 'date',
+        'start_activity' => 'date:Y-m-d',
+        'end_activity' => 'date:Y-m-d',
         'estimated_budget' => 'decimal:2',
-        'total' => 'decimal:2'
     ];
     public function ppmpdetails(): BelongsTo
     {

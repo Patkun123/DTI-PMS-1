@@ -1,10 +1,11 @@
-import { Head, Link } from "@inertiajs/react"
+import { Head, Link, usePage } from "@inertiajs/react"
 import AppLayout from "@/layouts/app-layout"
+import { ToastContainer, toast } from 'react-toastify'
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type BreadcrumbItem } from "@/types"
 import { create as Ppmpcreate, index as ppmpIndex } from "@/routes/ppmp"
-import { PpmpData } from "@/components/ppmp/table"
+import { PpmpTable } from "@/components/ppmp/table"
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -14,10 +15,18 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-export default function Index({ purchaseRequests }: any) {
+export default function Index({ ppmp }: any) {
+  const { props }: any = usePage()
+  if (props.flash?.success) {
+    toast.success(props.flash.success)
+  }
+  if (props.flash?.error) {
+    toast.error(props.flash.error)
+  }
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Purchase Requests" />
+      <ToastContainer />
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -31,7 +40,7 @@ export default function Index({ purchaseRequests }: any) {
             </Button>
           </Link>
         </div>
-        <PpmpData />
+        <PpmpTable data={ppmp?.data ?? []} pagination={ppmp ?? null} />
       </div>
     </AppLayout>
   )

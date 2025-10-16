@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class Usermanagement extends Controller
@@ -13,11 +15,11 @@ class Usermanagement extends Controller
      */
     public function index()
     {
-        $users = User::select('id', 'name', 'email', 'role', 'requester')
-                     ->orderBy('id', 'desc')
-                     ->paginate(10);
+        $users = User::select('id', 'name', 'email', 'role', 'division', 'requester', 'created_at')
+            ->orderBy('id', 'desc')
+            ->paginate(10);
 
-        return Inertia::render('admin/usermanagement', [
+        return Inertia::render('admin/users/index', [
             'users' => $users,
         ]);
     }
@@ -27,7 +29,7 @@ class Usermanagement extends Controller
      */
     public function create()
     {
-        //
+        return Inertia::render('admin/users/create');
     }
 
     /**
@@ -35,7 +37,21 @@ class Usermanagement extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|in:admin,user',
+            'division' => 'nullable|string|max:255',
+            'requester' => 'nullable|string|max:255',
+        ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+
+        User::create($validated);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'User created successfully.');
     }
 
     /**
@@ -43,7 +59,9 @@ class Usermanagement extends Controller
      */
     public function show(User $user)
     {
-        //
+        return Inertia::render('admin/users/show', [
+            'user' => $user,
+        ]);
     }
 
     /**
@@ -51,7 +69,9 @@ class Usermanagement extends Controller
      */
     public function edit(User $user)
     {
-        //
+        return Inertia::render('admin/users/edit', [
+            'user' => $user,
+        ]);
     }
 
     /**
@@ -59,7 +79,25 @@ class Usermanagement extends Controller
      */
     public function update(Request $request, User $user)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'required|in:admin,user',
+            'division' => 'nullable|string|max:255',
+            'requester' => 'nullable|string|max:255',
+        ]);
+
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $user->update($validated);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'User updated successfully.');
     }
 
     /**
@@ -67,6 +105,15 @@ class Usermanagement extends Controller
      */
     public function destroy(User $user)
     {
-        //
+        // Prevent deleting the current user
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users.index')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'User deleted successfully.');
     }
 }

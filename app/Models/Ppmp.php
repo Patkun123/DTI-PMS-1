@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Ppmp extends Model
 {
     use HasFactory;
-     protected $fillable = [
+    protected $table = 'ppmp';
+    protected $fillable = [
         'ppmp_no',
         'user_id',
         'status_plan',

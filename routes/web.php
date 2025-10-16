@@ -19,18 +19,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //PPMP Route
     Route::resource('ppmp', App\Http\Controllers\PpmpController::class);
+    Route::get('/ppmp/{ppmp}/print', [App\Http\Controllers\PpmpController::class, 'print'])->name('ppmp.print');
 
-     Route::get('/ppmp/prints', function () {
-        return inertia('ppmp/print');
-    })->name('ppmp.print');
 
-    // Route::resource('user-management', App\Http\Controllers\UserController::class);
+    // User Management Routes
+    Route::prefix('admin/users')->name('admin.users.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Usermanagement::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\Usermanagement::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\Usermanagement::class, 'store'])->name('store');
+        Route::get('/{user}', [App\Http\Controllers\Usermanagement::class, 'show'])->name('show');
+        Route::get('/{user}/edit', [App\Http\Controllers\Usermanagement::class, 'edit'])->name('edit');
+        Route::put('/{user}', [App\Http\Controllers\Usermanagement::class, 'update'])->name('update');
+        Route::delete('/{user}', [App\Http\Controllers\Usermanagement::class, 'destroy'])->name('destroy');
+    });
+
+    // Legacy route for backward compatibility
     Route::get('user-management/index', [App\Http\Controllers\Usermanagement::class, 'index'])->name('usermanagementindex');
 });
 
 //user
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('user/dashboard', function(){
+    Route::get('user/dashboard', function () {
         return Inertia::render('user/dashboard');
     })->name('userdashboard');
 });

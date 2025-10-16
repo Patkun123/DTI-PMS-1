@@ -66,7 +66,7 @@ export function AppSidebar() {
             },
             {
                 title: 'User Management',
-                href: usermanagementindex(),
+                href: '/admin/users',
                 icon: Users,
             },
             {

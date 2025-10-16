@@ -1,4 +1,4 @@
-import { Head, Form, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,6 @@ interface PpmpItem {
     expected_delivery: string;
     source_funds: string;
     estimated_budget: number;
-    total: number;
     attached_support: string;
     remarks: string;
     ppmp_ref: string;
@@ -58,9 +57,9 @@ interface PpmpFormData {
     details: PpmpDetail[];
 }
 
-export default function Create() {
+export default function Create({ proposed_ppmp_no }: any) {
     const { data, setData, post, processing, errors } = useForm<PpmpFormData>({
-        ppmp_no: '',
+        ppmp_no: proposed_ppmp_no ?? '',
         status_plan: 'indicative',
         approved_date: null,
         details: [{
@@ -75,7 +74,6 @@ export default function Create() {
                 expected_delivery: '',
                 source_funds: '',
                 estimated_budget: 0,
-                total: 0,
                 attached_support: '',
                 remarks: '',
                 ppmp_ref: '',
@@ -98,7 +96,6 @@ export default function Create() {
                     expected_delivery: '',
                     source_funds: '',
                     estimated_budget: 0,
-                    total: 0,
                     attached_support: '',
                     remarks: '',
                     ppmp_ref: '',
@@ -125,7 +122,6 @@ export default function Create() {
             expected_delivery: '',
             source_funds: '',
             estimated_budget: 0,
-            total: 0,
             attached_support: '',
             remarks: '',
             ppmp_ref: '',
@@ -163,6 +159,10 @@ export default function Create() {
         });
     };
 
+    const computeGrandTotal = () => {
+        return data.details.reduce((sum, d) => sum + d.items.reduce((s, i) => s + (Number(i.estimated_budget) || 0), 0), 0);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create PPMP" />
@@ -181,15 +181,13 @@ export default function Create() {
                         <CardTitle>Create New PPMP Plan</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Form
-                            action={Ppmpstore().url}
-                            method="post"
+                        <form
                             className="space-y-6"
                             onSubmit={handleSubmit}
                         >
                             {/* PPMP Header Info */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg animate-in fade-in duration-1000">
-                                {/* <div>
+                                <div>
                                     <Label htmlFor="status_plan" className="mb-2">
                                         Status Plan
                                     </Label>
@@ -207,7 +205,7 @@ export default function Create() {
                                         </SelectContent>
                                     </Select>
                                     <InputError message={errors.status_plan} />
-                                </div> */}
+                                </div>
 
                                 {/* <div>
                                     <Label htmlFor="status" className="mb-2">
@@ -244,19 +242,7 @@ export default function Create() {
 
 
 
-                                <div>
-                                    <Label htmlFor="approved_date" className="mb-2">
-                                        Approved Date (Optional)
-                                    </Label>
-                                    <Input
-                                        id="approved_date"
-                                        name="approved_date"
-                                        type="date"
-                                        value={data.approved_date || ''}
-                                        onChange={(e) => setData('approved_date', e.target.value || null)}
-                                    />
-                                    <InputError message={errors.approved_date} />
-                                </div>
+                                {/* Approved date removed per requirement; backend defaults to null */}
                             </div>
 
                             {/* Details Section */}
@@ -407,11 +393,11 @@ export default function Create() {
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs">Expected Delivery</Label>
+                                                    <Label className="text-xs">Expected Delivery (MM/YYYY - MM/YYYY)</Label>
                                                     <Input
                                                         value={item.expected_delivery}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'expected_delivery', e.target.value)}
-                                                        placeholder="e.g., 30 days"
+                                                        placeholder="10/2025 - 12/2025"
                                                         required
                                                     />
                                                 </div>
@@ -437,16 +423,7 @@ export default function Create() {
                                                     />
                                                 </div>
 
-                                                <div>
-                                                    <Label className="text-xs">Total</Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={item.total}
-                                                        onChange={(e) => updateItem(detailIndex, itemIndex, 'total', Number(e.target.value))}
-                                                        required
-                                                    />
-                                                </div>
+                                                {/* Per requirement, remove item total; grand total computed from estimated_budget */}
 
                                                 <div>
                                                     <Label className="text-xs">Attached Support</Label>
@@ -492,7 +469,13 @@ export default function Create() {
                                 </div>
                             ))}
 
-                            <div className="flex gap-4 justify-end">
+                            <div className="flex items-center gap-4 justify-end">
+                                <div className="mr-auto text-sm text-muted-foreground">
+                                    Grand Total:{' '}
+                                    <span className="font-semibold">
+                                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(computeGrandTotal())}
+                                    </span>
+                                </div>
                                 <Button
                                     type="button"
                                     variant="secondary"
@@ -505,7 +488,7 @@ export default function Create() {
                                     {processing ? 'Creating...' : 'Create PPMP'}
                                 </Button>
                             </div>
-                        </Form>
+                        </form>
                     </CardContent>
                 </Card>
             </div>
