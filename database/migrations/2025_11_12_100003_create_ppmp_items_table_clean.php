@@ -6,16 +6,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('ppmp_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ppmp_detail_id')
-                ->constrained('ppmp_details')
-                ->onDelete('cascade');
+            $table->foreignId('ppmp_detail_id')->constrained('ppmp_details')->onDelete('cascade');
             $table->string('detail');
             $table->string('type_project');
             $table->string('qty_size');
@@ -24,18 +19,19 @@ return new class extends Migration
             $table->date('start_activity');
             $table->date('end_activity');
             $table->string('expected_delivery');
-            $table->string('source_funds');
-            $table->decimal('estimated_budget', 15, 2);
-            $table->string('attached_support');
-            $table->string('remarks');
-            $table->string('ppmp_ref');
+            $table->string('source_funds')->nullable();
+            $table->decimal('estimated_budget', 15, 2)->default(0);
+            $table->string('attached_support')->nullable();
+            $table->text('remarks')->nullable();
+            $table->string('ppmp_ref')->nullable();
             $table->timestamps();
+
+            // Indexes for performance
+            $table->index('ppmp_detail_id');
+            $table->index('created_at');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('ppmp_items');

@@ -43,7 +43,6 @@ interface PpmpItem {
     estimated_budget: number;
     attached_support: string;
     remarks: string;
-    ppmp_ref: string;
 }
 
 interface PpmpDetail {
@@ -54,6 +53,7 @@ interface PpmpDetail {
 interface PpmpFormData {
     ppmp_no: string;
     status_plan: string;
+    allocated_budget: number;
     approved_date: string | null;
     details: PpmpDetail[];
 }
@@ -62,6 +62,7 @@ export default function Create({ proposed_ppmp_no }: any) {
     const { data, setData, post, processing, errors } = useForm<PpmpFormData>({
         ppmp_no: proposed_ppmp_no ?? '',
         status_plan: 'indicative',
+        allocated_budget: 0,
         approved_date: null,
         details: [{
             general_description: '',
@@ -78,7 +79,6 @@ export default function Create({ proposed_ppmp_no }: any) {
                 estimated_budget: 0,
                 attached_support: '',
                 remarks: '',
-                ppmp_ref: '',
             }],
         }],
     });
@@ -101,7 +101,6 @@ export default function Create({ proposed_ppmp_no }: any) {
                     estimated_budget: 0,
                     attached_support: '',
                     remarks: '',
-                    ppmp_ref: '',
                 }],
             },
         ]);
@@ -128,7 +127,6 @@ export default function Create({ proposed_ppmp_no }: any) {
             estimated_budget: 0,
             attached_support: '',
             remarks: '',
-            ppmp_ref: '',
         });
         setData('details', newDetails);
     };
@@ -166,6 +164,14 @@ export default function Create({ proposed_ppmp_no }: any) {
     const computeGrandTotal = () => {
         return data.details.reduce((sum, d) => sum + d.items.reduce((s, i) => s + (Number(i.estimated_budget) || 0), 0), 0);
     };
+
+    // Auto-update allocated budget when estimated budgets change
+    React.useEffect(() => {
+        const totalEstimated = computeGrandTotal();
+        if (data.allocated_budget !== totalEstimated) {
+            setData('allocated_budget', totalEstimated);
+        }
+    }, [data.details]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -209,6 +215,30 @@ export default function Create({ proposed_ppmp_no }: any) {
                                         </SelectContent>
                                     </Select>
                                     <InputError message={errors.status_plan} />
+                                </div>
+
+                                {/* Top-level Source of Funds removed - now collected per procurement item */}
+
+                                <div>
+                                    <Label htmlFor="allocated_budget" className="mb-2">
+                                        Allocated Budget (Auto-calculated)
+                                    </Label>
+                                    <Input
+                                        id="allocated_budget"
+                                        type="number"
+                                        name="allocated_budget"
+                                        value={data.allocated_budget}
+                                        readOnly
+                                        disabled
+                                        className="bg-gray-100 cursor-not-allowed"
+                                        placeholder="Calculated from estimated budgets"
+                                        min="0"
+                                        step="0.01"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Automatically calculated from the sum of all estimated budgets
+                                    </p>
+                                    <InputError message={errors.allocated_budget} />
                                 </div>
 
                                 {/* <div>
@@ -433,19 +463,14 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                             <SelectValue placeholder="Source of Fund" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="otop">OTOP</SelectItem>
-                                                            <SelectItem value="ssf">Shared Service Facilities  Project</SelectItem>
-                                                            <SelectItem value="nc">Negosyo Center</SelectItem>
-                                                            <SelectItem value="carp">Carp</SelectItem>
-                                                            <SelectItem value="rf003">003 Regular Fund</SelectItem>
-                                                            <SelectItem value="rf001">001 Regular Fund</SelectItem>
-                                                            <SelectItem value="rf002">002 Regular Fund</SelectItem>
-                                                            <SelectItem value="rf004">004 Regular Fund</SelectItem>
-                                                            <SelectItem value="rapidgop">Rapid Gop</SelectItem>
-                                                            <SelectItem value="rapidlp">Rapid Lp</SelectItem>
-                                                            <SelectItem value="mssd">MSSD</SelectItem>
-                                                            <SelectItem value="afmdld">AFMD LD</SelectItem>
-                                                            <SelectItem value="afmdrr">AFMD RR</SelectItem>
+                                                            <SelectItem value="OTOP - One Town One Product">OTOP - One Town One Product</SelectItem>
+                                                            <SelectItem value="GAD - Gender and Development">GAD - Gender and Development</SelectItem>
+                                                            <SelectItem value="ICT - Information and Communications Technology">ICT - Information and Communications Technology</SelectItem>
+                                                            <SelectItem value="MSME - Micro, Small and Medium Enterprises">MSME - Micro, Small and Medium Enterprises</SelectItem>
+                                                            <SelectItem value="TRADE - Trade Development">TRADE - Trade Development</SelectItem>
+                                                            <SelectItem value="INVESTMENT - Investment Promotion">INVESTMENT - Investment Promotion</SelectItem>
+                                                            <SelectItem value="CONSUMER - Consumer Protection">CONSUMER - Consumer Protection</SelectItem>
+                                                            <SelectItem value="ADMIN - Administrative">ADMIN - Administrative</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -473,15 +498,6 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     />
                                                 </div>
 
-                                                <div>
-                                                    <Label className="text-xs mb-2">PPMP Ref</Label>
-                                                    <Input
-                                                        value={item.ppmp_ref}
-                                                        onChange={(e) => updateItem(detailIndex, itemIndex, 'ppmp_ref', e.target.value)}
-                                                        placeholder="Reference number"
-                                                        required
-                                                    />
-                                                </div>
 
                                                 <div className="md:col-span-3">
                                                     <Label className="text-xs mb-2">Remarks</Label>
@@ -509,10 +525,17 @@ export default function Create({ proposed_ppmp_no }: any) {
 
                             <div className="flex items-center gap-4 justify-end">
                                 <div className="mr-auto text-sm text-muted-foreground">
-                                    Grand Total:{' '}
-                                    <span className="font-semibold">
-                                        {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(computeGrandTotal())}
-                                    </span>
+                                    <div className="flex flex-col">
+                                        <div>
+                                            Grand Total:{' '}
+                                            <span className="font-semibold">
+                                                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(computeGrandTotal())}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs">
+                                            This automatically sets the Allocated Budget
+                                        </div>
+                                    </div>
                                 </div>
                                 <Button
                                     type="button"

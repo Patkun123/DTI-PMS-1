@@ -65,12 +65,12 @@ export function ChartAreaInteractive({ data }: { data: any[] }) {
     if (isMobile) setTimeRange("7d")
   }, [isMobile])
 
-  // Laravel data format: [{ date: "2024-10-01", total: 5 }, ...]
-  // Adapt to chart format
+  // Laravel data format now: [{ date: 'YYYY-mm-dd', purchaseRequest: n, ppmp: m }, ...]
+  // Ensure we accept both legacy and new shapes.
   const chartData = data.map((item) => ({
     date: item.date,
-    purchaseRequest: item.total,
-    ppmp: Math.floor(item.total * 0.8), // 👈 placeholder for now (until PPMP data exists)
+    purchaseRequest: typeof item.purchaseRequest !== 'undefined' ? item.purchaseRequest : item.total ?? 0,
+    ppmp: typeof item.ppmp !== 'undefined' ? item.ppmp : Math.floor((item.total ?? 0) * 0.8),
   }))
 
   const filteredData = chartData.filter((item) => {

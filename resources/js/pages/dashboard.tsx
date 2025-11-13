@@ -15,9 +15,10 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: dashboard().url,
     },
 ];
-type PurchaseRequestChartPoint = {
+type SeriesPoint = {
   date: string
-  total: number
+  purchaseRequest: number
+  ppmp: number
 }
 
 type DashboardStats = {
@@ -27,7 +28,7 @@ type DashboardStats = {
   complete: number
   ongoing: number
   cancelled: number
-  chartData: PurchaseRequestChartPoint[]
+  chartData: SeriesPoint[]
 }
 
 interface DashboardPageProps {

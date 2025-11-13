@@ -5,14 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Ppmp;
 use App\Models\PpmpDetails;
 use App\Models\PpmpItems;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Inertia\Response;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PpmpController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -26,11 +29,16 @@ class PpmpController extends Controller
                 return [
                     'id' => $plan->id,
                     'ppmp_no' => $plan->ppmp_no,
+                    'ppmp_ref' => $plan->ppmp_ref,
                     'status_plan' => $plan->status_plan,
                     'division' => $plan->division,
                     'status' => $plan->status,
                     'approved_date' => $plan->approved_date,
                     'total' => $plan->total,
+                    'allocated_budget' => $plan->allocated_budget,
+                    'used_budget' => $plan->used_budget,
+                    'remaining_budget' => $plan->remaining_budget,
+                    'budget_status' => $plan->budget_status,
                     'details_count' => $plan->details_count,
                     'created_at' => $plan->created_at,
                     'user' => [
@@ -68,6 +76,8 @@ class PpmpController extends Controller
             'status_plan' => 'nullable|string',
             'status' => 'nullable|in:close,utilized,process',
             'approved_date' => 'nullable',
+            // Top-level source_funds removed: source of funds is now stored on procurement project details
+            'allocated_budget' => 'required|numeric|min:0', // Add allocated budget validation
             'details' => 'required|array|min:1',
             'details.*.general_description' => 'required|string',
             'details.*.items' => 'required|array|min:1',
@@ -83,7 +93,6 @@ class PpmpController extends Controller
             'details.*.items.*.estimated_budget' => 'required|numeric',
             'details.*.items.*.attached_support' => 'required|string',
             'details.*.items.*.remarks' => 'required|string',
-            'details.*.items.*.ppmp_ref' => 'required|string',
         ]);
         $total_budget = 0;
         foreach ($validated['details'] as $detail) {
@@ -94,24 +103,45 @@ class PpmpController extends Controller
         $division = Auth::user()->division ?? 'General';
         $ppmpNo = $this->generateNextPpmpNo($division);
 
-        $ppmpId = DB::transaction(function () use ($validated, $division, $ppmpNo, $total_budget) {
+        // Generate automatic PPMP reference based on the first detail/item's source of funds
+        // Business rule: use the first available source_funds in the payload to seed reference generation.
+        $firstSourceFunds = null;
+        if (!empty($validated['details']) && !empty($validated['details'][0]['items']) && isset($validated['details'][0]['items'][0]['source_funds'])) {
+            $firstSourceFunds = $validated['details'][0]['items'][0]['source_funds'];
+        }
+        $ppmpRef = Ppmp::generatePpmpReference($firstSourceFunds ?? 'DEFAULT');
+
+        $ppmpId = DB::transaction(function () use ($validated, $division, $ppmpNo, $ppmpRef, $total_budget) {
             $ppmp = Ppmp::create([
                 'ppmp_no' => $ppmpNo,
+                'ppmp_ref' => $ppmpRef,
                 'user_id' => Auth::user()->id,
                 'status_plan' => $validated['status_plan'] ?? 'indicative',
                 'division' => $division,
                 'status' => 'process',
                 'approved_date' => null,
-                'total' => $total_budget
+                'total' => $total_budget,
+                'allocated_budget' => $validated['allocated_budget'],
+                'used_budget' => 0,
+                'remaining_budget' => $validated['allocated_budget'],
+                'budget_status' => 'available', // Default budget status
             ]);
 
-            foreach ($validated['details'] as $detailData) {
+            foreach ($validated['details'] as $detailIndex => $detailData) {
+                // Create detail and store its source_funds (derive from first item of the detail if available)
+                $detailSource = null;
+                if (!empty($detailData['items']) && isset($detailData['items'][0]['source_funds'])) {
+                    $detailSource = $detailData['items'][0]['source_funds'];
+                }
+
                 $detail = PpmpDetails::create([
                     'ppmp_id' => $ppmp->id,
-                    'general_description' => $detailData['general_description']
+                    'general_description' => $detailData['general_description'],
+                    'ppmp_code' => $ppmpRef . '-' . str_pad($detailIndex + 1, 2, '0', STR_PAD_LEFT),
+                    'source_funds' => $detailSource,
                 ]);
 
-                foreach ($detailData['items'] as $itemData) {
+                foreach ($detailData['items'] as $itemIndex => $itemData) {
                     PpmpItems::create([
                         'detail' => $itemData['detail'],
                         'ppmp_detail_id' => $detail->id,
@@ -126,7 +156,7 @@ class PpmpController extends Controller
                         'estimated_budget' => (float) $itemData['estimated_budget'],
                         'attached_support' => $itemData['attached_support'],
                         'remarks' => $itemData['remarks'],
-                        'ppmp_ref' => $itemData['ppmp_ref']
+                        'ppmp_ref' => $ppmpRef . '-' . str_pad($detailIndex + 1, 2, '0', STR_PAD_LEFT) . '-' . str_pad($itemIndex + 1, 2, '0', STR_PAD_LEFT)
                     ]);
                 }
             }
@@ -170,6 +200,9 @@ class PpmpController extends Controller
         $ppmp = Ppmp::with(['user', 'details.items'])
             ->findOrFail($id);
 
+        // Authorize: only final plans with utilized status can be viewed
+        $this->authorize('view', $ppmp);
+
         return Inertia::render('ppmp/show', [
             'ppmp' => $ppmp,
         ]);
@@ -183,6 +216,9 @@ class PpmpController extends Controller
         $ppmp = Ppmp::with(['details.items'])
             ->findOrFail($id);
 
+        // Authorize: only final plans with utilized status can be edited
+        $this->authorize('update', $ppmp);
+
         return Inertia::render('ppmp/edit', [
             'ppmp' => $ppmp,
         ]);
@@ -193,6 +229,9 @@ class PpmpController extends Controller
      */
     public function print(Ppmp $ppmp): Response
     {
+        // Authorize: only final plans with utilized status can be printed
+        $this->authorize('print', $ppmp);
+
         $ppmp->load(['user', 'details.items']);
 
         return Inertia::render('ppmp/print', [
@@ -206,6 +245,9 @@ class PpmpController extends Controller
     public function update(Request $request, string $id)
     {
         $ppmp = Ppmp::with(['details.items'])->findOrFail($id);
+
+        // Authorize: only final plans with utilized status can be updated
+        $this->authorize('update', $ppmp);
 
         $validated = $request->validate([
             'status_plan' => 'nullable|string',
@@ -227,7 +269,6 @@ class PpmpController extends Controller
             'details.*.items.*.estimated_budget' => 'required|numeric',
             'details.*.items.*.attached_support' => 'required|string',
             'details.*.items.*.remarks' => 'required|string',
-            'details.*.items.*.ppmp_ref' => 'required|string',
         ]);
 
         // Update top-level fields
@@ -242,9 +283,16 @@ class PpmpController extends Controller
             $ppmp->details()->delete();
 
             foreach ($validated['details'] as $detailData) {
+                // derive detail-level source_funds from its first item if present
+                $detailSource = null;
+                if (!empty($detailData['items']) && isset($detailData['items'][0]['source_funds'])) {
+                    $detailSource = $detailData['items'][0]['source_funds'];
+                }
+
                 $detail = PpmpDetails::create([
                     'ppmp_id' => $ppmp->id,
                     'general_description' => $detailData['general_description'],
+                    'source_funds' => $detailSource,
                 ]);
 
                 foreach ($detailData['items'] as $itemData) {
@@ -261,7 +309,6 @@ class PpmpController extends Controller
                         'estimated_budget' => $itemData['estimated_budget'],
                         'attached_support' => $itemData['attached_support'],
                         'remarks' => $itemData['remarks'],
-                        'ppmp_ref' => $itemData['ppmp_ref'],
                     ]);
                     $newTotal += (float) $itemData['estimated_budget'];
                 }

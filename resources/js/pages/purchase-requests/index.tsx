@@ -13,7 +13,7 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-export default function Index({ purchaseRequests }: any) {
+export default function Index({ purchaseRequests, divisions, availableYears, filters }: any) {
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Purchase Requests" />
@@ -30,7 +30,12 @@ export default function Index({ purchaseRequests }: any) {
             </Button>
           </Link>
         </div>
-        <PurchaseRequestsTable purchaseRequests={purchaseRequests} />
+        <PurchaseRequestsTable 
+          purchaseRequests={purchaseRequests} 
+          divisions={divisions}
+          availableYears={availableYears}
+          filters={filters}
+        />
       </div>
     </AppLayout>
   )

@@ -30,8 +30,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Create() {
+export default function Create({ availablePpmps }: { availablePpmps: any[] }) {
     const { data, setData, post, processing, errors } = useForm({
+        ppmp_id: '',
         requested_date: new Date().toISOString().split('T')[0], // Default to today
         purpose: '',
         ris_status: '',
@@ -89,6 +90,38 @@ export default function Create() {
                             action={purchaseRequestsStore().url}
                             method="post"
                             className="space-y-6">
+                            
+                            {/* PPMP Selection */}
+                            <div>
+                                <Label htmlFor="ppmp_id">PPMP Reference *</Label>
+                                <Select
+                                    name="ppmp_id"
+                                    value={data.ppmp_id}
+                                    onValueChange={(value) => setData('ppmp_id', value)}
+                                    required
+                                >
+                                    <SelectTrigger className="w-full bg-background">
+                                        <SelectValue placeholder="Select PPMP Reference" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availablePpmps.map((ppmp) => (
+                                            <SelectItem key={ppmp.id} value={ppmp.id.toString()}>
+                                                {ppmp.ppmp_ref} - {ppmp.ppmp_no} 
+                                                (Budget: ₱{ppmp.allocated_budget.toLocaleString()} | 
+                                                Used: ₱{ppmp.used_budget.toLocaleString()} | 
+                                                Remaining: ₱{ppmp.remaining_budget.toLocaleString()})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.ppmp_id} />
+                                {availablePpmps.length === 0 && (
+                                    <p className="text-sm text-red-600 mt-1">
+                                        No available PPMP found. Please create a PPMP first.
+                                    </p>
+                                )}
+                            </div>
+
                             {/* Requested Date */}
                             <div>
                                 <Label htmlFor="requested_date">Requested Date</Label>

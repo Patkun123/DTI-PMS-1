@@ -13,7 +13,9 @@ class PpmpDetails extends Model
     protected $table = 'ppmp_details';
     protected $fillable = [
         'general_description',
-        'ppmp_id'
+        'ppmp_id',
+        'ppmp_code',
+        'source_funds',
     ];
 
 

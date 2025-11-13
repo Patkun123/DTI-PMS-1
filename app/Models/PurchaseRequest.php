@@ -14,6 +14,7 @@ class PurchaseRequest extends Model
     protected $fillable = [
         'pr_number',
         'user_id',
+        'ppmp_id',
         'purpose',
         'ris_status',
         'ris_number',
@@ -36,6 +37,12 @@ class PurchaseRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    // ✅ Each PR belongs to one PPMP (for payment tracking)
+    public function ppmp(): BelongsTo
+    {
+        return $this->belongsTo(Ppmp::class);
     }
 
     // ✅ Each PR has many items (nested line items)
@@ -127,5 +134,4 @@ class PurchaseRequest extends Model
             $purchaseRequest->items()->delete();
         });
     }
-
 }

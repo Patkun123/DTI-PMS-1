@@ -40,13 +40,24 @@ import {
 type PpmpRow = {
   id: number
   ppmp_no: string
+  ppmp_ref: string
   status_plan: string
   division: string
   status: string
   approved_date: string | null
   total: number
+  allocated_budget: number
+  used_budget: number
+  remaining_budget: number
+  budget_status: string
   details_count: number
   created_at: string
+}
+
+// Helper function to check if PPMP is usable
+// UI-level: we no longer show a "locked" state — actions are visible for all rows.
+const isUsablePpmp = (row: PpmpRow): boolean => {
+  return true
 }
 
 export const columns: ColumnDef<PpmpRow>[] = [
@@ -73,20 +84,69 @@ export const columns: ColumnDef<PpmpRow>[] = [
     enableHiding: false,
   },
   { accessorKey: "ppmp_no", header: "PPMP No." },
+  {
+    accessorKey: "ppmp_ref",
+    header: "PPMP Reference",
+    cell: ({ row }) => (
+      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+        {row.getValue("ppmp_ref")}
+      </span>
+    ),
+  },
   { accessorKey: "division", header: "Division" },
   { accessorKey: "status_plan", header: "Plan" },
   { accessorKey: "status", header: "Status" },
   { accessorKey: "details_count", header: "Sections" },
   {
-    accessorKey: "total",
-    header: () => <div className="text-right">Total</div>,
+    accessorKey: "allocated_budget",
+    header: () => <div className="text-right">Allocated Budget</div>,
     cell: ({ row }) => {
-      const amount = Number(row.getValue("total"))
+      const amount = Number(row.getValue("allocated_budget"))
       const formatted = new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
       }).format(amount)
       return <div className="text-right font-medium">{formatted}</div>
+    },
+  },
+  {
+    accessorKey: "used_budget",
+    header: () => <div className="text-right">Used Budget</div>,
+    cell: ({ row }) => {
+      const amount = Number(row.getValue("used_budget"))
+      const formatted = new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+      }).format(amount)
+      return <div className="text-right font-medium text-orange-600">{formatted}</div>
+    },
+  },
+  {
+    accessorKey: "remaining_budget",
+    header: () => <div className="text-right">Remaining Budget</div>,
+    cell: ({ row }) => {
+      const amount = Number(row.getValue("remaining_budget"))
+      const formatted = new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+      }).format(amount)
+      const colorClass = amount <= 0 ? "text-red-600" : amount < 10000 ? "text-yellow-600" : "text-green-600"
+      return <div className={`text-right font-medium ${colorClass}`}>{formatted}</div>
+    },
+  },
+  {
+    accessorKey: "budget_status",
+    header: "Budget Status",
+    cell: ({ row }) => {
+      const status = row.getValue("budget_status") as string
+      const colorClass = status === "Exhausted" ? "bg-red-100 text-red-800" :
+                        status === "Partially Used" ? "bg-yellow-100 text-yellow-800" :
+                        "bg-green-100 text-green-800"
+      return (
+        <span className={`px-2 py-1 rounded text-xs ${colorClass}`}>
+          {status}
+        </span>
+      )
     },
   },
   {

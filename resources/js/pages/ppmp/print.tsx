@@ -29,7 +29,7 @@ export default function PrintLayout() {
         </div>
 
         <div
-            className="mx-auto text-[2px] font-sans ml-30 mt-20"
+            className="mx-auto text-[2px] font-sans ml-30 mt-10"
             style={{ width: "100%", maxWidth: "1200px" }}
         >
           {/* HEADER */}
@@ -40,10 +40,20 @@ export default function PrintLayout() {
             </p>
             <div className="flex gap-6 text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="w-4 h-4" /> INDICATIVE
+                <input
+                  type="checkbox"
+                  className="w-4 h-4"
+                  checked={props.ppmp?.status_plan === 'indicative'}
+                  readOnly
+                /> INDICATIVE
               </label>
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="w-4 h-4" /> FINAL
+                <input
+                  type="checkbox"
+                  className="w-4 h-4"
+                  checked={props.ppmp?.status_plan === 'final'}
+                  readOnly
+                /> FINAL
               </label>
             </div>
           </div>
@@ -55,7 +65,7 @@ export default function PrintLayout() {
           </div>
 
           {/* TABLE */}
-          <div className="overflow-x-auto border-1 border-black">
+          <div className="overflow-x-auto border-black">
             <table className="w-full border-collapse text-[8px] print:text-[7px]">
               <thead>
                 <tr className="bg-gray-100 print:bg-white">
@@ -74,7 +84,7 @@ export default function PrintLayout() {
                   <th className="border-t border-l border-black py-2 px-1 font-bold text-[9px] print:text-[8px]">
                     Remarks
                   </th>
-                  <th className="border border-black py-2 px-1 font-bold text-[9px] print:text-[8px]">
+                  <th className="border-t border-l border-r border-black py-2 px-1 font-bold text-[9px] print:text-[8px]">
                     PPMP Reference No.
                   </th>
                 </tr>
@@ -111,8 +121,7 @@ export default function PrintLayout() {
                   </th>
                   <th className="px-1 py-1.5 text-[7px] print:text-[6px] font-semibold w-[8%]"></th>
                   <th className="border-l border-black px-1 py-1.5 text-[7px] print:text-[6px] font-semibold w-[6%]"></th>
-                  <th className="border border-black px-1 py-1.5 text-[7px] print:text-[6px] font-semibold w-[5%]">
-                    Reference No.
+                  <th className="border-black border-b border-l border-r px-1 py-1.5 text-[7px] print:text-[6px] font-semibold w-[5%]">
                   </th>
                 </tr>
               </thead>
@@ -125,10 +134,23 @@ export default function PrintLayout() {
                         {/* Header row with general description */}
                         <tr className="border-b border-black">
                           <td
-                            colSpan={13}
+                            colSpan={8}
                             className="border border-black px-1.5 py-1.5 text-left font-bold text-[7px] print:text-[6px] bg-gray-50 print:bg-gray-100"
                           >
                             {detail.general_description}
+                          </td>
+                          <td className="border border-black px-1.5 py-1.5 text-right text-[7px] print:text-[6px] font-bold">
+                            TOTAL:
+                          </td>
+                            <td className="border border-black px-1 py-1.5 text-right text-[7px] print:text-[6px] font-bold">
+                            {Number(detail.items?.reduce((sum: number, item: any) => sum + Number(item.estimated_budget), 0) || 0).toLocaleString('en-PH', {
+                              style: 'currency',
+                              currency: 'PHP'
+                            })}
+                          </td>
+                          <td colSpan={2} className="border border-black"></td>
+                            <td className="border border-black px-1 py-1.5 text-center text-[5px] print:text-[5px] font-bold">
+                            {detail.ppmp_code ?? '____'}
                           </td>
                         </tr>
                         {/* Item rows */}
@@ -172,9 +194,6 @@ export default function PrintLayout() {
                             </td>
                             <td className="border border-black px-1 py-1.5 text-center text-[7px] print:text-[6px]">
                               {it.remarks}
-                            </td>
-                            <td className="border border-black px-1 py-1.5 text-center text-[7px] print:text-[6px]">
-                              {it.ppmp_ref}
                             </td>
                           </tr>
                         ))}

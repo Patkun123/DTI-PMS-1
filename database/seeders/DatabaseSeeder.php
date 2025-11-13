@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
                 'role' => 'admin',
                 'requester' => 'Hazel E. Hautea',
-                'position'=> 'Chief Administrative Officer',
+                'position' => 'Chief Administrative Officer',
                 'division' => 'AFMD'
             ]
         );
@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
                 'role' => 'user',
                 'requester' => 'Elbert G. Capecio',
-                'position'=> 'Consumer Protection Chief',
+                'position' => 'Consumer Protection Chief',
                 'division' => 'CPD'
             ]
         );
@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
                 'role' => 'user',
                 'requester' => 'Ma. Theresa T. Chua',
-                'position'=> 'Sme Development Division Chief',
+                'position' => 'Sme Development Division Chief',
                 'division' => 'SDD'
             ]
         );
@@ -60,7 +60,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
                 'role' => 'user',
                 'requester' => 'Dagny A. Martirizar',
-                'position'=> 'OIC, Industrial Department Division Chief',
+                'position' => 'OIC, Industrial Department Division Chief',
                 'division' => 'IDD'
             ]
         );
@@ -78,6 +78,8 @@ class DatabaseSeeder extends Seeder
         // );
 
         $this->call([
+            SystemDetailsSeeder::class,
+            PpmpSeeder::class,
             PurchaseRequestSeeder::class,
         ]);
     }

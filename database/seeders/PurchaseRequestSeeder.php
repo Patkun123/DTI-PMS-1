@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\PurchaseRequest;
+use App\Models\Ppmp;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,10 +15,17 @@ class PurchaseRequestSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            // Sample purchase requests
+            // Get available PPMPs for linking purchase requests
+            $ppmpAfmd = Ppmp::where('division', 'AFMD')->first();
+            $ppmpCpd = Ppmp::where('division', 'CPD')->first();
+            $ppmpSdd = Ppmp::where('division', 'SDD')->first();
+            $ppmpIdd = Ppmp::where('division', 'IDD')->first();
+
+            // Sample purchase requests with PPMP references
             $requests = [
                 [
-                    'user_id' => 2,
+                    'user_id' => 2, // CPD
+                    'ppmp_id' => $ppmpCpd?->id,
                     'purpose' => 'Procurement of musical trainer and director services for DTI-12 Chorale Team',
                     'status' => 'cancelled',
                     'ris_status' => 'with',
@@ -42,7 +50,8 @@ class PurchaseRequestSeeder extends Seeder
                     ],
                 ],
                 [
-                    'user_id' => 1,
+                    'user_id' => 1, // AFMD
+                    'ppmp_id' => $ppmpAfmd?->id,
                     'purpose' => 'Office equipment upgrade project',
                     'status' => 'completed',
                     'ris_status' => 'none',
@@ -59,7 +68,8 @@ class PurchaseRequestSeeder extends Seeder
                     ],
                 ],
                 [
-                    'user_id' => 1,
+                    'user_id' => 1, // AFMD
+                    'ppmp_id' => $ppmpAfmd?->id,
                     'purpose' => 'Promotional materials for product launch campaign',
                     'status' => 'ongoing',
                     'ris_status' => 'with',
@@ -76,7 +86,8 @@ class PurchaseRequestSeeder extends Seeder
                     ],
                 ],
                 [
-                    'user_id' => 1,
+                    'user_id' => 1, // AFMD
+                    'ppmp_id' => $ppmpAfmd?->id,
                     'purpose' => 'Office furniture replacement',
                     'status' => 'approved',
                     'ris_status' => 'none',
@@ -101,7 +112,8 @@ class PurchaseRequestSeeder extends Seeder
                     ],
                 ],
                 [
-                    'user_id' => 3,
+                    'user_id' => 3, // SDD
+                    'ppmp_id' => $ppmpSdd?->id,
                     'purpose' => 'Annual software license renewal',
                     'status' => 'ongoing',
                     'ris_status' => 'with',
@@ -125,9 +137,58 @@ class PurchaseRequestSeeder extends Seeder
                         ],
                     ],
                 ],
+                [
+                    'user_id' => 4, // IDD
+                    'ppmp_id' => $ppmpIdd?->id,
+                    'purpose' => 'ICT equipment procurement for digital transformation',
+                    'status' => 'ongoing',
+                    'ris_status' => 'with',
+                    'requested_date' => now()->subDays(7),
+                    'items' => [
+                        [
+                            'stock_no' => 50,
+                            'item_description' => 'Network Switch 24-port Gigabit',
+                            'quantity' => 2,
+                            'unit' => 'pc',
+                            'unit_cost' => 15000.00,
+                            'total_cost' => 30000.00,
+                        ],
+                        [
+                            'stock_no' => 51,
+                            'item_description' => 'Wireless Access Points',
+                            'quantity' => 4,
+                            'unit' => 'pc',
+                            'unit_cost' => 8000.00,
+                            'total_cost' => 32000.00,
+                        ],
+                    ],
+                ],
+                [
+                    'user_id' => 2, // CPD
+                    'ppmp_id' => $ppmpCpd?->id,
+                    'purpose' => 'Consumer protection awareness materials',
+                    'status' => 'approved',
+                    'ris_status' => 'none',
+                    'requested_date' => now()->subDays(20),
+                    'items' => [
+                        [
+                            'stock_no' => 60,
+                            'item_description' => 'Educational brochures and flyers',
+                            'quantity' => 1000,
+                            'unit' => 'pc',
+                            'unit_cost' => 5.00,
+                            'total_cost' => 5000.00,
+                        ],
+                    ],
+                ],
             ];
 
             foreach ($requests as $requestData) {
+                // Skip if PPMP doesn't exist
+                if (!$requestData['ppmp_id']) {
+                    continue;
+                }
+
                 $items = $requestData['items'];
                 unset($requestData['items']);
 
@@ -143,6 +204,11 @@ class PurchaseRequestSeeder extends Seeder
 
                 // Attach items
                 $purchaseRequest->items()->createMany($items);
+
+                // Update PPMP budget after creating purchase request
+                if ($purchaseRequest->ppmp) {
+                    $purchaseRequest->ppmp->updateBudgetAndStatus();
+                }
             }
         });
     }

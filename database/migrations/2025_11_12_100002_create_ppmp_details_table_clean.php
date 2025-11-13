@@ -6,25 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('ppmp_details', function (Blueprint $table) {
             $table->id();
-            $table->string('general_description');
-            $table->foreignId('ppmp_id')
-                ->constrained('ppmp')
-                ->onDelete('cascade');
-            $table->string('ppmp_code');
+            $table->foreignId('ppmp_id')->constrained('ppmp')->onDelete('cascade');
+            $table->text('general_description');
+            $table->string('ppmp_code')->nullable();
+            $table->string('source_funds')->nullable();
             $table->timestamps();
+
+            // Indexes for performance
+            $table->index('ppmp_id');
+            $table->index('created_at');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('ppmp_details');

@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -69,6 +70,7 @@ interface PurchaseRequest {
   requested_date: string
   purpose: string
   user: { name: string; email: string }
+  ppmp: { id: number; ppmp_ref: string; ppmp_no: string } | null
   items: PurchaseRequestItem[]
 }
 
@@ -79,6 +81,13 @@ interface Props {
     last_page: number
     per_page: number
     total: number
+  }
+  divisions?: string[]
+  availableYears?: number[]
+  filters?: {
+    division?: string
+    year?: string
+    month?: string
   }
 }
 
@@ -110,6 +119,21 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
     accessorKey: "pr_number",
     header: "PR Number",
     cell: ({ row }) => <div className="truncate max-w-xs text-xs">{row.original.pr_number}</div>,
+  },
+  {
+    accessorKey: "ppmp.ppmp_ref",
+    header: "PPMP Reference",
+    cell: ({ row }) => (
+      <div className="truncate max-w-xs text-xs">
+        {row.original.ppmp ? (
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+            {row.original.ppmp.ppmp_ref}
+          </span>
+        ) : (
+          <span className="text-red-500 text-xs">No PPMP</span>
+        )}
+      </div>
+    ),
   },
   {
     accessorKey: "item_description",
@@ -247,11 +271,42 @@ export const columns: ColumnDef<PurchaseRequest>[] = [
   },
 ]
 
-export default function PurchaseRequestsTable({ purchaseRequests }: Props) {
+export default function PurchaseRequestsTable({ purchaseRequests, divisions = [], availableYears = [], filters = {} }: Props) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+
+  const handleYearFilter = (year: string) => {
+    const currentUrl = new URL(window.location.href)
+    if (year === 'all') {
+      currentUrl.searchParams.delete('year')
+    } else {
+      currentUrl.searchParams.set('year', year)
+    }
+    router.get(currentUrl.pathname + currentUrl.search, {}, {
+      preserveState: true,
+      preserveScroll: true,
+    })
+  }
+
+  const handleMonthFilter = (month: string) => {
+    const currentUrl = new URL(window.location.href)
+    if (month === 'all') {
+      currentUrl.searchParams.delete('month')
+    } else {
+      currentUrl.searchParams.set('month', month)
+    }
+    router.get(currentUrl.pathname + currentUrl.search, {}, {
+      preserveState: true,
+      preserveScroll: true,
+    })
+  }
+
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ]
 
   const table = useReactTable({
     data: purchaseRequests.data,
@@ -290,6 +345,36 @@ export default function PurchaseRequestsTable({ purchaseRequests }: Props) {
           }
           className="max-w-sm"
         />
+        <Select value={filters.year || 'all'} onValueChange={handleYearFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by year" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Years</SelectItem>
+            {availableYears.map((year) => (
+              <SelectItem key={year} value={year.toString()}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select value={filters.month || 'all'} onValueChange={handleMonthFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by month" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Months</SelectItem>
+            {monthNames.map((month, index) => {
+              const monthNumber = String(index + 1).padStart(2, '0')
+              return (
+                <SelectItem key={month} value={monthNumber}>
+                  {month}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

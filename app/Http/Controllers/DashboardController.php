@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
+use App\Models\Ppmp;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -18,14 +19,42 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        $chartData = PurchaseRequest::select(
+        // Build a combined time-series for Purchase Requests and PPMPs for the last 90 days.
+        $end = now()->endOfDay();
+        $start = now()->subDays(89)->startOfDay(); // include today => 90 days total
+
+        $prSeries = PurchaseRequest::select(
                 DB::raw('DATE(requested_date) as date'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('requested_date', '>=', now()->subDays(90))
+            ->whereBetween('requested_date', [$start, $end])
             ->groupBy('date')
             ->orderBy('date')
-            ->get();
+            ->pluck('total', 'date')
+            ->toArray();
+
+        $ppmpSeries = Ppmp::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as total')
+            )
+            ->whereBetween('created_at', [$start, $end])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Fill missing dates with zeroes so chart libraries have a continuous series.
+        $chartData = [];
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $d = $cursor->format('Y-m-d');
+            $chartData[] = [
+                'date' => $d,
+                'purchaseRequest' => isset($prSeries[$d]) ? (int) $prSeries[$d] : 0,
+                'ppmp' => isset($ppmpSeries[$d]) ? (int) $ppmpSeries[$d] : 0,
+            ];
+            $cursor->addDay();
+        }
 
         $daily = PurchaseRequest::whereDate('created_at', Carbon::today())->count();
         $weekly = PurchaseRequest::whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])->count();

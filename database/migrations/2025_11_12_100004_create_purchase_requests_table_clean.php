@@ -6,30 +6,30 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('purchase_requests', function (Blueprint $table) {
             $table->id();
             $table->string('pr_number')->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('purpose')->nullable();
+            $table->foreignId('ppmp_id')->nullable()->constrained('ppmp')->onDelete('set null');
+            $table->text('purpose')->nullable();
             $table->string('division')->nullable();
-            $table->enum('status', ['ongoing', 'approved','cancelled','completed'])->default('ongoing');
+            $table->enum('status', ['ongoing', 'approved', 'cancelled', 'completed'])->default('ongoing');
             $table->date('approved_date')->nullable();
             $table->date('requested_date');
             $table->string('ris_status')->default('none');
-            $table->string('ris_number')->unique()->nullable();
+            $table->string('ris_number')->nullable()->unique();
             $table->timestamps();
-        });
 
+            // Indexes for performance
+            $table->index('user_id');
+            $table->index('ppmp_id');
+            $table->index('status');
+            $table->index('created_at');
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('purchase_requests');
