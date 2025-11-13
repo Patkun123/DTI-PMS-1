@@ -21,6 +21,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('ppmp', App\Http\Controllers\PpmpController::class);
     Route::get('/ppmp/{ppmp}/print', [App\Http\Controllers\PpmpController::class, 'print'])->name('ppmp.print');
 
+    // Source of Funds Route
+    Route::resource('source-of-funds', App\Http\Controllers\SourceOfFundController::class);
+
 
     // User Management Routes
     Route::prefix('admin/users')->name('admin.users.')->group(function () {
