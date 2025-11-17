@@ -22,7 +22,22 @@ class SourceOfFundController extends Controller
             $query->where('division', $request->division);
         }
 
-        $items = $query->orderBy('name')->paginate(25);
+        // Support simple name/description search from frontend (q param)
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 25);
+        $items = $query->orderBy('name')->paginate($perPage);
+
+        // If request expects JSON (e.g., from fetch), return JSON
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($items);
+        }
 
         // collect divisions from existing PPMP or users if available
         $divisions = SourceOfFund::select('division')->whereNotNull('division')->distinct()->orderBy('division')->pluck('division');

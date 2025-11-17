@@ -7,6 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $ppmp_no
+ * @property string $ppmp_ref
+ * @property int $user_id
+ * @property string|null $status_plan
+ * @property string|null $division
+ * @property string|null $status
+ * @property \Illuminate\Support\Carbon|null $approved_date
+ * @property float $total
+ * @property float $allocated_budget
+ * @property float $used_budget
+ * @property float $remaining_budget
+ * @property string|null $budget_status
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property User $user
+ * @property \Illuminate\Database\Eloquent\Collection $details
+ * @property \Illuminate\Database\Eloquent\Collection $purchaseRequests
+ */
 class Ppmp extends Model
 {
     use HasFactory;
@@ -53,8 +73,9 @@ class Ppmp extends Model
     // ✅ Generate automatic PPMP reference code based on source of funds
     public static function generatePpmpReference(string $sourceFunds): string
     {
-        // Extract the main fund code (e.g., "OTOP" from "OTOP - One Town One Product")
-        $fundCode = strtoupper(trim(explode(' ', $sourceFunds)[0]));
+        // Convert full fund name to code (e.g., "Work Environment" -> "WORK-ENVIRONMENT")
+        // Remove hyphens and multiple spaces, then replace remaining spaces with hyphens
+        $fundCode = strtoupper(trim(preg_replace('/[\s-]+/', '-', $sourceFunds)));
 
         // Get current year
         $year = now()->format('Y');
@@ -70,7 +91,7 @@ class Ppmp extends Model
             $sequence = (int)$matches[1] + 1;
         }
 
-        // Generate reference like: OTOP-2025-001
+        // Generate reference like: WORK-ENVIRONMENT-2025-001
         return sprintf('%s-%s-%03d', $fundCode, $year, $sequence);
     }
 
