@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ppmp;
 use App\Models\PpmpDetails;
 use App\Models\PpmpItems;
+use App\Models\SourceOfFund;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -64,6 +65,7 @@ class PpmpController extends Controller
 
         return Inertia::render('ppmp/create', [
             'proposed_ppmp_no' => $proposed,
+            'user_division' => $division,
         ]);
     }
 
@@ -89,7 +91,7 @@ class PpmpController extends Controller
             'details.*.items.*.start_activity' => 'required|date',
             'details.*.items.*.end_activity' => 'required|date',
             'details.*.items.*.expected_delivery' => 'required|string',
-            'details.*.items.*.source_funds' => 'required|string',
+            'details.*.items.*.source_funds' => 'required|integer|exists:source_of_funds,id',
             'details.*.items.*.estimated_budget' => 'required|numeric',
             'details.*.items.*.attached_support' => 'required|string',
             'details.*.items.*.remarks' => 'required|string',
@@ -103,13 +105,22 @@ class PpmpController extends Controller
         $division = Auth::user()->division ?? 'General';
         $ppmpNo = $this->generateNextPpmpNo($division);
 
-        // Generate automatic PPMP reference based on the first detail/item's source of funds
-        // Business rule: use the first available source_funds in the payload to seed reference generation.
-        $firstSourceFunds = null;
+        // Generate automatic PPMP reference based on the first detail/item's source of funds ID
+        // Convert ID to source of fund name for reference generation
+        $firstSourceFundsId = null;
         if (!empty($validated['details']) && !empty($validated['details'][0]['items']) && isset($validated['details'][0]['items'][0]['source_funds'])) {
-            $firstSourceFunds = $validated['details'][0]['items'][0]['source_funds'];
+            $firstSourceFundsId = $validated['details'][0]['items'][0]['source_funds'];
         }
-        $ppmpRef = Ppmp::generatePpmpReference($firstSourceFunds ?? 'DEFAULT');
+
+        // Look up the source fund name from ID for reference generation
+        $firstSourceFundName = 'DEFAULT';
+        if ($firstSourceFundsId) {
+            $sourceOfFund = SourceOfFund::find($firstSourceFundsId);
+            if ($sourceOfFund) {
+                $firstSourceFundName = $sourceOfFund->name;
+            }
+        }
+        $ppmpRef = Ppmp::generatePpmpReference($firstSourceFundName);
 
         $ppmpId = DB::transaction(function () use ($validated, $division, $ppmpNo, $ppmpRef, $total_budget) {
             $ppmp = Ppmp::create([
@@ -128,10 +139,12 @@ class PpmpController extends Controller
             ]);
 
             foreach ($validated['details'] as $detailIndex => $detailData) {
-                // Create detail and store its source_funds (derive from first item of the detail if available)
+                // Create detail and store its source_funds (derive from first item ID and convert to name)
                 $detailSource = null;
                 if (!empty($detailData['items']) && isset($detailData['items'][0]['source_funds'])) {
-                    $detailSource = $detailData['items'][0]['source_funds'];
+                    $sourceId = $detailData['items'][0]['source_funds'];
+                    $sourceOfFund = SourceOfFund::find($sourceId);
+                    $detailSource = $sourceOfFund ? $sourceOfFund->name : null;
                 }
 
                 $detail = PpmpDetails::create([
@@ -142,6 +155,13 @@ class PpmpController extends Controller
                 ]);
 
                 foreach ($detailData['items'] as $itemIndex => $itemData) {
+                    // Convert source_funds ID to name
+                    $sourceFundName = null;
+                    if (isset($itemData['source_funds'])) {
+                        $sourceOfFund = SourceOfFund::find($itemData['source_funds']);
+                        $sourceFundName = $sourceOfFund ? $sourceOfFund->name : null;
+                    }
+
                     PpmpItems::create([
                         'detail' => $itemData['detail'],
                         'ppmp_detail_id' => $detail->id,
@@ -152,7 +172,7 @@ class PpmpController extends Controller
                         'start_activity' => $itemData['start_activity'],
                         'end_activity' => $itemData['end_activity'],
                         'expected_delivery' => $itemData['expected_delivery'],
-                        'source_funds' => $itemData['source_funds'],
+                        'source_funds' => $sourceFundName,
                         'estimated_budget' => (float) $itemData['estimated_budget'],
                         'attached_support' => $itemData['attached_support'],
                         'remarks' => $itemData['remarks'],
@@ -265,7 +285,7 @@ class PpmpController extends Controller
             'details.*.items.*.start_activity' => 'required|date',
             'details.*.items.*.end_activity' => 'required|date',
             'details.*.items.*.expected_delivery' => 'required|string',
-            'details.*.items.*.source_funds' => 'required|string',
+            'details.*.items.*.source_funds' => 'required|integer|exists:source_of_funds,id',
             'details.*.items.*.estimated_budget' => 'required|numeric',
             'details.*.items.*.attached_support' => 'required|string',
             'details.*.items.*.remarks' => 'required|string',
@@ -283,10 +303,12 @@ class PpmpController extends Controller
             $ppmp->details()->delete();
 
             foreach ($validated['details'] as $detailData) {
-                // derive detail-level source_funds from its first item if present
+                // derive detail-level source_funds from its first item ID and convert to name
                 $detailSource = null;
                 if (!empty($detailData['items']) && isset($detailData['items'][0]['source_funds'])) {
-                    $detailSource = $detailData['items'][0]['source_funds'];
+                    $sourceId = $detailData['items'][0]['source_funds'];
+                    $sourceOfFund = SourceOfFund::find($sourceId);
+                    $detailSource = $sourceOfFund ? $sourceOfFund->name : null;
                 }
 
                 $detail = PpmpDetails::create([
@@ -296,6 +318,13 @@ class PpmpController extends Controller
                 ]);
 
                 foreach ($detailData['items'] as $itemData) {
+                    // Convert source_funds ID to name
+                    $sourceFundName = null;
+                    if (isset($itemData['source_funds'])) {
+                        $sourceOfFund = SourceOfFund::find($itemData['source_funds']);
+                        $sourceFundName = $sourceOfFund ? $sourceOfFund->name : null;
+                    }
+
                     PpmpItems::create([
                         'ppmp_detail_id' => $detail->id,
                         'type_project' => $itemData['type_project'],
@@ -305,7 +334,7 @@ class PpmpController extends Controller
                         'start_activity' => $itemData['start_activity'],
                         'end_activity' => $itemData['end_activity'],
                         'expected_delivery' => $itemData['expected_delivery'],
-                        'source_funds' => $itemData['source_funds'],
+                        'source_funds' => $sourceFundName,
                         'estimated_budget' => $itemData['estimated_budget'],
                         'attached_support' => $itemData['attached_support'],
                         'remarks' => $itemData['remarks'],

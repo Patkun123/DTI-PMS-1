@@ -19,6 +19,22 @@ import { type BreadcrumbItem } from '@/types';
 import { index as ppmpIndex, create as Ppmpcreate, store as Ppmpstore } from '@/routes/ppmp';
 import React from 'react';
 
+// Lightweight debounce helper
+function debounceFn<Func extends (...args: any[]) => any>(fn: Func, wait = 300) {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const debounced = (...args: Parameters<Func>) => {
+        if (t) clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+    };
+    debounced.cancel = () => {
+        if (t) {
+            clearTimeout(t);
+            t = null;
+        }
+    };
+    return debounced as Func & { cancel: () => void };
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Project Procurement Management Plan',
@@ -39,7 +55,7 @@ interface PpmpItem {
     start_activity: string;
     end_activity: string;
     expected_delivery: string;
-    source_funds: string;
+    source_funds: number;
     estimated_budget: number;
     attached_support: string;
     remarks: string;
@@ -58,7 +74,23 @@ interface PpmpFormData {
     details: PpmpDetail[];
 }
 
-export default function Create({ proposed_ppmp_no }: any) {
+interface FormErrors {
+    [key: string]: string | undefined;
+}
+
+interface SourceOption {
+    id: number;
+    name: string;
+    division?: string;
+}
+
+// Helper function to check if date is valid
+const isValidDate = (dateString: string): boolean => {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+};
+
+export default function Create({ proposed_ppmp_no, user_division }: any) {
     const { data, setData, post, processing, errors } = useForm<PpmpFormData>({
         ppmp_no: proposed_ppmp_no ?? '',
         status_plan: 'indicative',
@@ -75,7 +107,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                 start_activity: '',
                 end_activity: '',
                 expected_delivery: '',
-                source_funds: '',
+                source_funds: 0,
                 estimated_budget: 0,
                 attached_support: '',
                 remarks: '',
@@ -83,100 +115,341 @@ export default function Create({ proposed_ppmp_no }: any) {
         }],
     });
 
+    // Track previous total to prevent infinite re-render
+    const prevTotalRef = React.useRef<number>(0);
+    const isUpdatingBudgetRef = React.useRef<boolean>(false);
+
+    // Source of funds state
+    const [sourceOptions, setSourceOptions] = React.useState<SourceOption[]>([]);
+    const [sourceLoading, setSourceLoading] = React.useState(false);
+
+    // Fetch source options
+    const fetchSourceOptions = React.useCallback(async (q: string) => {
+        try {
+            setSourceLoading(true);
+            const params = new URLSearchParams();
+            if (q) params.append('q', q);
+            if (user_division) params.append('division', user_division);
+            params.append('per_page', '50');
+
+            const res = await fetch(`/source-of-funds?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!res.ok) throw new Error('Failed to fetch');
+
+            const json = await res.json();
+            const data = json?.data ?? json?.source_of_funds?.data ?? json;
+            const items = Array.isArray(data) ? data : (data?.data ?? []);
+
+            const mapped: SourceOption[] = items.map((it: any) => ({
+                id: it.id,
+                name: it.name ?? it.title ?? it.description ?? 'Unnamed',
+                division: it.division
+            }));
+
+            setSourceOptions(mapped);
+        } catch (e) {
+            console.error('Failed to load source of funds', e);
+            toast.error('Failed to load source of funds');
+        } finally {
+            setSourceLoading(false);
+        }
+    }, [user_division]);
+
+    // Memoized debounced fetch
+    const debouncedFetchSource = React.useMemo(
+        () => debounceFn(fetchSourceOptions, 300),
+        [fetchSourceOptions]
+    );
+
+    // Cleanup debounce on unmount
+    React.useEffect(() => {
+        return () => {
+            debouncedFetchSource.cancel();
+        };
+    }, [debouncedFetchSource]);
+
+    // Initial fetch
+    React.useEffect(() => {
+        fetchSourceOptions('');
+    }, [fetchSourceOptions]);
+
+    // Compute grand total - memoized for performance
+    const grandTotal = React.useMemo(() => {
+        return data.details.reduce((sum, d) =>
+            sum + d.items.reduce((s, i) =>
+                s + (Number(i.estimated_budget) || 0), 0
+            ), 0
+        );
+    }, [data.details]);
+
+    // Auto-update allocated budget when grand total changes
+    React.useEffect(() => {
+        if (isUpdatingBudgetRef.current) return;
+
+        if (prevTotalRef.current !== grandTotal) {
+            prevTotalRef.current = grandTotal;
+            isUpdatingBudgetRef.current = true;
+
+            setData((prev) => ({
+                ...prev,
+                allocated_budget: grandTotal
+            }));
+
+            // Reset flag after state update
+            setTimeout(() => {
+                isUpdatingBudgetRef.current = false;
+            }, 0);
+        }
+    }, [grandTotal]); // Only depend on grandTotal, not setData
+
     const addDetail = () => {
-        setData('details', [
-            ...data.details,
-            {
-                general_description: '',
-                items: [{
-                    detail: '',
-                    type_project: '',
-                    qty_size: '',
-                    recommended: '',
-                    ppc: '',
-                    start_activity: '',
-                    end_activity: '',
-                    expected_delivery: '',
-                    source_funds: '',
-                    estimated_budget: 0,
-                    attached_support: '',
-                    remarks: '',
-                }],
-            },
-        ]);
+        setData((prev) => ({
+            ...prev,
+            details: [
+                ...prev.details,
+                {
+                    general_description: '',
+                    items: [{
+                        detail: '',
+                        type_project: '',
+                        qty_size: '',
+                        recommended: '',
+                        ppc: '',
+                        start_activity: '',
+                        end_activity: '',
+                        expected_delivery: '',
+                        source_funds: 0,
+                        estimated_budget: 0,
+                        attached_support: '',
+                        remarks: '',
+                    }],
+                },
+            ],
+        }));
     };
 
     const removeDetail = (detailIndex: number) => {
+        if (data.details.length === 1) {
+            toast.error('Cannot remove the last section');
+            return;
+        }
         if (window.confirm('Are you sure you want to remove this section?')) {
-            setData('details', data.details.filter((_, i) => i !== detailIndex));
+            setData((prev) => ({
+                ...prev,
+                details: prev.details.filter((_, i) => i !== detailIndex),
+            }));
         }
     };
 
     const addItem = (detailIndex: number) => {
-        const newDetails = [...data.details];
-        newDetails[detailIndex].items.push({
-            detail: '',
-            type_project: '',
-            qty_size: '',
-            recommended: '',
-            ppc: '',
-            start_activity: '',
-            end_activity: '',
-            expected_delivery: '',
-            source_funds: '',
-            estimated_budget: 0,
-            attached_support: '',
-            remarks: '',
+        setData((prev) => {
+            const newDetails = [...prev.details];
+            newDetails[detailIndex] = {
+                ...newDetails[detailIndex],
+                items: [
+                    ...newDetails[detailIndex].items,
+                    {
+                        detail: '',
+                        type_project: '',
+                        qty_size: '',
+                        recommended: '',
+                        ppc: '',
+                        start_activity: '',
+                        end_activity: '',
+                        expected_delivery: '',
+                        source_funds: 0,
+                        estimated_budget: 0,
+                        attached_support: '',
+                        remarks: '',
+                    },
+                ],
+            };
+            return { ...prev, details: newDetails };
         });
-        setData('details', newDetails);
     };
 
     const removeItem = (detailIndex: number, itemIndex: number) => {
+        if (data.details[detailIndex].items.length === 1) {
+            toast.error('Cannot remove the last item in a section');
+            return;
+        }
         if (window.confirm('Are you sure you want to remove this item?')) {
-            const newDetails = [...data.details];
-            newDetails[detailIndex].items = newDetails[detailIndex].items.filter((_, i) => i !== itemIndex);
-            setData('details', newDetails);
+            setData((prev) => {
+                const newDetails = [...prev.details];
+                newDetails[detailIndex] = {
+                    ...newDetails[detailIndex],
+                    items: newDetails[detailIndex].items.filter((_, i) => i !== itemIndex),
+                };
+                return { ...prev, details: newDetails };
+            });
         }
     };
 
     const updateDetail = (detailIndex: number, field: keyof PpmpDetail, value: string) => {
-        const newDetails = [...data.details];
-        if (field === 'general_description') {
-            newDetails[detailIndex].general_description = value;
-        }
-        setData('details', newDetails);
+        setData((prev) => {
+            const newDetails = [...prev.details];
+            if (field === 'general_description') {
+                newDetails[detailIndex] = {
+                    ...newDetails[detailIndex],
+                    general_description: value
+                };
+            }
+            return { ...prev, details: newDetails };
+        });
     };
 
-    const updateItem = (detailIndex: number, itemIndex: number, field: keyof PpmpItem, value: string | number) => {
-        const newDetails = [...data.details];
-        (newDetails[detailIndex].items[itemIndex][field] as any) = value;
-        setData('details', newDetails);
+    const updateItem = (
+        detailIndex: number,
+        itemIndex: number,
+        field: keyof PpmpItem,
+        value: string | number
+    ) => {
+        setData((prev) => {
+            const newDetails = [...prev.details];
+            const items = [...newDetails[detailIndex].items];
+            const currentItem = items[itemIndex];
+
+            // Date validation with proper date parsing
+            if (field === 'end_activity' && currentItem.start_activity) {
+                const startDate = new Date(currentItem.start_activity);
+                const endDate = new Date(value as string);
+
+                if (isValidDate(currentItem.start_activity) &&
+                    isValidDate(value as string) &&
+                    endDate < startDate) {
+                    toast.error('End date cannot be before start date');
+                    return prev;
+                }
+            }
+
+            if (field === 'start_activity' && currentItem.end_activity) {
+                const startDate = new Date(value as string);
+                const endDate = new Date(currentItem.end_activity);
+
+                if (isValidDate(value as string) &&
+                    isValidDate(currentItem.end_activity) &&
+                    startDate > endDate) {
+                    toast.error('Start date cannot be after end date');
+                    return prev;
+                }
+            }
+
+            // Budget validation
+            if (field === 'estimated_budget' && Number(value) < 0) {
+                toast.error('Budget cannot be negative');
+                return prev;
+            }
+
+            items[itemIndex] = { ...items[itemIndex], [field]: value };
+            newDetails[detailIndex] = { ...newDetails[detailIndex], items };
+            return { ...prev, details: newDetails };
+        });
+    };
+
+    // Comprehensive form validation
+    const validateForm = (): boolean => {
+        // Check if there are details
+        if (data.details.length === 0) {
+            toast.error('At least one detail section is required');
+            return false;
+        }
+
+        // Validate each section
+        for (let i = 0; i < data.details.length; i++) {
+            const detail = data.details[i];
+
+            // Check general description
+            if (!detail.general_description.trim()) {
+                toast.error(`Section ${i + 1} must have a general description`);
+                return false;
+            }
+
+            // Check if section has items
+            if (detail.items.length === 0) {
+                toast.error(`Section ${i + 1} must have at least one item`);
+                return false;
+            }
+
+            // Validate each item
+            for (let j = 0; j < detail.items.length; j++) {
+                const item = detail.items[j];
+                const itemLabel = `Section ${i + 1}, Item ${j + 1}`;
+
+                if (!item.detail.trim()) {
+                    toast.error(`${itemLabel}: Object of Expenditure is required`);
+                    return false;
+                }
+
+                if (!item.type_project) {
+                    toast.error(`${itemLabel}: Type of Project is required`);
+                    return false;
+                }
+
+                if (!item.qty_size.trim()) {
+                    toast.error(`${itemLabel}: Quantity/Size is required`);
+                    return false;
+                }
+
+                if (!item.recommended) {
+                    toast.error(`${itemLabel}: Recommended Mode is required`);
+                    return false;
+                }
+
+                if (!item.start_activity) {
+                    toast.error(`${itemLabel}: Start Activity date is required`);
+                    return false;
+                }
+
+                if (!item.end_activity) {
+                    toast.error(`${itemLabel}: End Activity date is required`);
+                    return false;
+                }
+
+                if (!item.expected_delivery.trim()) {
+                    toast.error(`${itemLabel}: Expected Delivery is required`);
+                    return false;
+                }
+
+                if (!item.source_funds || item.source_funds === 0) {
+                    toast.error(`${itemLabel}: Source of Funds is required`);
+                    return false;
+                }
+
+                if (!item.estimated_budget || item.estimated_budget <= 0) {
+                    toast.error(`${itemLabel}: Estimated Budget must be greater than 0`);
+                    return false;
+                }
+
+                if (!item.attached_support.trim()) {
+                    toast.error(`${itemLabel}: Attached Support is required`);
+                    return false;
+                }
+            }
+        }
+
+        return true;
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate form before submission
+        if (!validateForm()) {
+            return;
+        }
+
         post(Ppmpstore().url, {
             onSuccess: () => toast.success('PPMP created successfully!'),
-            onError: () => toast.error('Failed to create PPMP'),
+            onError: () => toast.error('Failed to create PPMP. Please check the form for errors.'),
         });
     };
-
-    const computeGrandTotal = () => {
-        return data.details.reduce((sum, d) => sum + d.items.reduce((s, i) => s + (Number(i.estimated_budget) || 0), 0), 0);
-    };
-
-    // Auto-update allocated budget when estimated budgets change
-    React.useEffect(() => {
-        const totalEstimated = computeGrandTotal();
-        if (data.allocated_budget !== totalEstimated) {
-            setData('allocated_budget', totalEstimated);
-        }
-    }, [data.details]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Create PPMP" />
-            <ToastContainer />
+            <ToastContainer position="top-right" autoClose={3000} />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm" asChild>
@@ -191,10 +464,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                         <CardTitle>Create New PPMP Plan</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <form
-                            className="space-y-6"
-                            onSubmit={handleSubmit}
-                        >
+                        <form className="space-y-6" onSubmit={handleSubmit}>
                             {/* PPMP Header Info */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg animate-in fade-in duration-1000">
                                 <div>
@@ -204,7 +474,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                     <Select
                                         name="status_plan"
                                         value={data.status_plan}
-                                        onValueChange={(value) => setData('status_plan', value)}
+                                        onValueChange={(value) => setData((prev) => ({ ...prev, status_plan: value }))}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select status plan" />
@@ -214,10 +484,8 @@ export default function Create({ proposed_ppmp_no }: any) {
                                             <SelectItem value="final">Final</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <InputError message={errors.status_plan} />
+                                    <InputError message={(errors as FormErrors).status_plan} />
                                 </div>
-
-                                {/* Top-level Source of Funds removed - now collected per procurement item */}
 
                                 <div>
                                     <Label htmlFor="allocated_budget" className="mb-2">
@@ -238,45 +506,22 @@ export default function Create({ proposed_ppmp_no }: any) {
                                     <p className="text-xs text-muted-foreground mt-1">
                                         Automatically calculated from the sum of all estimated budgets
                                     </p>
-                                    <InputError message={errors.allocated_budget} />
+                                    <InputError message={(errors as FormErrors).allocated_budget} />
                                 </div>
 
-                                {/* <div>
-                                    <Label htmlFor="status" className="mb-2">
-                                        Status
-                                    </Label>
-                                    <Select
-                                        name="status"
-                                        value={data.status}
-                                        onValueChange={(value) => setData('status', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="process">Process</SelectItem>
-                                            <SelectItem value="utilized">Utilized</SelectItem>
-                                            <SelectItem value="close">Close</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={errors.status} />
-                                </div> */}
                                 <div>
-                                    <Label htmlFor="approved_date" className="mb-2">
-                                       PPMP Number
+                                    <Label htmlFor="ppmp_no" className="mb-2">
+                                        PPMP Number
                                     </Label>
                                     <Input
-                                            id="ppmp_no"
-                                            name="ppmp_no"
-                                            value={data.ppmp_no}
-                                            readOnly
-                                            disabled
-                                        />
+                                        id="ppmp_no"
+                                        name="ppmp_no"
+                                        value={data.ppmp_no}
+                                        readOnly
+                                        disabled
+                                        className="bg-gray-100 cursor-not-allowed"
+                                    />
                                 </div>
-
-
-
-                                {/* Approved date removed per requirement; backend defaults to null */}
                             </div>
 
                             {/* Details Section */}
@@ -288,7 +533,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                 >
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-semibold text-lg">
-                                            Procurement Project Details
+                                            Procurement Project Details #{detailIndex + 1}
                                         </h3>
                                         {data.details.length > 1 && (
                                             <Button
@@ -296,6 +541,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                 variant="destructive"
                                                 size="sm"
                                                 onClick={() => removeDetail(detailIndex)}
+                                                aria-label={`Remove section ${detailIndex + 1}`}
                                             >
                                                 Remove Section
                                             </Button>
@@ -315,7 +561,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                             placeholder="Enter the general description of this procurement section"
                                             required
                                         />
-                                        <InputError message={errors[`details.${detailIndex}.general_description` as keyof typeof errors]} />
+                                        <InputError message={(errors as FormErrors)[`details.${detailIndex}.general_description`]} />
                                     </div>
 
                                     {/* Items */}
@@ -327,7 +573,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                         >
                                             <div className="flex justify-between items-center mb-3">
                                                 <span className="font-semibold">
-                                                    Procurement Fill up {itemIndex + 1}
+                                                    Procurement Item {itemIndex + 1}
                                                 </span>
                                                 {detail.items.length > 1 && (
                                                     <Button
@@ -335,6 +581,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                         variant="destructive"
                                                         size="sm"
                                                         onClick={() => removeItem(detailIndex, itemIndex)}
+                                                        aria-label={`Remove item ${itemIndex + 1}`}
                                                     >
                                                         Remove Item
                                                     </Button>
@@ -356,7 +603,6 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     <Select
                                                         value={item.type_project}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'type_project', value)}
-                                                        required
                                                     >
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select type" />
@@ -379,38 +625,35 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     />
                                                 </div>
 
-                                                <div>
+                                                <div className="md:col-span-2">
                                                     <Label className="text-xs mb-2">Recommended Mode</Label>
                                                     <Select
                                                         value={item.recommended}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'recommended', value)}
-                                                        required
-
                                                     >
-                                                        <SelectTrigger className="w-full text-sm truncate">
+                                                        <SelectTrigger className="w-full">
                                                             <SelectValue placeholder="Select mode" />
                                                         </SelectTrigger>
-                                                        <SelectContent >
+                                                        <SelectContent>
                                                             <SelectItem value="Direct Contracting">Direct Contracting</SelectItem>
                                                             <SelectItem value="Direct Acquisition">Direct Acquisition</SelectItem>
                                                             <SelectItem value="Competitive Bidding">Competitive Bidding</SelectItem>
                                                             <SelectItem value="Small Value Procurement">Negotiated Procurement - Small Value</SelectItem>
                                                             <SelectItem value="Emergency Cases Procurement">Negotiated Procurement - Emergency Cases</SelectItem>
                                                             <SelectItem value="Lease of Real Property and Venue">Negotiated Procurement - Lease of Real Property and Venue</SelectItem>
-                                                            <SelectItem value="Direct Retail Purchase of Petroleum, Oil and Lubricant and Online Subscriptions">Negotiated Procurement Direct Retail Purchase of Petroleum, Oil and Lubricant and Online Subscriptions</SelectItem>
-                                                            <SelectItem value="Scholarly or Artistic Work, Exclusive Technology and Media Service">Negotiated Procurement , Scholarly or Artistic Work, Exclusive Technology and Media Service</SelectItem>
-                                                            <SelectItem value="Direct Procurement for Science, Technology, and Innovation">Direct Procurement for Science, Technology, and Innovation</SelectItem>
-                                                            <SelectItem value="Purchase of Common-Use Supplies not available in the Procurement Service">Purchase of Common-Use Supplies not available in the Procurement Service</SelectItem>
+                                                            <SelectItem value="Direct Retail Purchase of Petroleum, Oil and Lubricant and Online Subscriptions">Negotiated Procurement - Direct Retail Purchase of POL & Subscriptions</SelectItem>
+                                                            <SelectItem value="Scholarly or Artistic Work, Exclusive Technology and Media Service">Negotiated Procurement - Scholarly/Artistic Work</SelectItem>
+                                                            <SelectItem value="Direct Procurement for Science, Technology, and Innovation">Direct Procurement - Science & Technology</SelectItem>
+                                                            <SelectItem value="Purchase of Common-Use Supplies not available in the Procurement Service">Purchase of Common-Use Supplies (Not in PS)</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
 
                                                 <div>
-                                                    <Label className="text-xs mb-2">Pre-Procurement Conference, if applicable</Label>
+                                                    <Label className="text-xs mb-2">Pre-Procurement Conference</Label>
                                                     <Select
                                                         value={item.ppc}
                                                         onValueChange={(value) => updateItem(detailIndex, itemIndex, 'ppc', value)}
-                                                        required
                                                     >
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Yes/No" />
@@ -438,6 +681,7 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                         type="date"
                                                         value={item.end_activity}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'end_activity', e.target.value)}
+                                                        min={item.start_activity || undefined}
                                                         required
                                                     />
                                                 </div>
@@ -452,25 +696,27 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     />
                                                 </div>
 
-                                                <div>
-                                                    <Label className="text-xs mb-2">Source of Funds</Label>
+                                                <div className="md:col-span-2">
+                                                    <Label className="text-xs mb-2">Source of Funds ({user_division})</Label>
                                                     <Select
-                                                        value={item.source_funds}
-                                                        onValueChange={(value) => updateItem(detailIndex, itemIndex, 'source_funds', value)}
-                                                        required
+                                                        value={String(item.source_funds || '')}
+                                                        onValueChange={(value) => updateItem(detailIndex, itemIndex, 'source_funds', Number(value))}
                                                     >
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Source of Fund" />
+                                                            <SelectValue placeholder={sourceLoading ? 'Loading...' : 'Select source of funds'} />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="OTOP - One Town One Product">OTOP - One Town One Product</SelectItem>
-                                                            <SelectItem value="GAD - Gender and Development">GAD - Gender and Development</SelectItem>
-                                                            <SelectItem value="ICT - Information and Communications Technology">ICT - Information and Communications Technology</SelectItem>
-                                                            <SelectItem value="MSME - Micro, Small and Medium Enterprises">MSME - Micro, Small and Medium Enterprises</SelectItem>
-                                                            <SelectItem value="TRADE - Trade Development">TRADE - Trade Development</SelectItem>
-                                                            <SelectItem value="INVESTMENT - Investment Promotion">INVESTMENT - Investment Promotion</SelectItem>
-                                                            <SelectItem value="CONSUMER - Consumer Protection">CONSUMER - Consumer Protection</SelectItem>
-                                                            <SelectItem value="ADMIN - Administrative">ADMIN - Administrative</SelectItem>
+                                                            {sourceLoading && (
+                                                                <SelectItem value="0" disabled>Loading...</SelectItem>
+                                                            )}
+                                                            {!sourceLoading && sourceOptions.length === 0 && (
+                                                                <SelectItem value="0" disabled>No sources found for {user_division}</SelectItem>
+                                                            )}
+                                                            {!sourceLoading && sourceOptions.map((opt) => (
+                                                                <SelectItem key={opt.id} value={String(opt.id)}>
+                                                                    {opt.name}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -480,15 +726,14 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     <Input
                                                         type="number"
                                                         step="0.01"
+                                                        min="0"
                                                         value={item.estimated_budget}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'estimated_budget', Number(e.target.value))}
                                                         required
                                                     />
                                                 </div>
 
-                                                {/* Per requirement, remove item total; grand total computed from estimated_budget */}
-
-                                                <div>
+                                                <div className="md:col-span-2">
                                                     <Label className="text-xs mb-2">Attached Support</Label>
                                                     <Input
                                                         value={item.attached_support}
@@ -498,14 +743,13 @@ export default function Create({ proposed_ppmp_no }: any) {
                                                     />
                                                 </div>
 
-
                                                 <div className="md:col-span-3">
                                                     <Label className="text-xs mb-2">Remarks</Label>
                                                     <Textarea
                                                         value={item.remarks}
                                                         onChange={(e) => updateItem(detailIndex, itemIndex, 'remarks', e.target.value)}
                                                         placeholder="Additional notes"
-                                                        required
+                                                        rows={2}
                                                     />
                                                 </div>
                                             </div>
@@ -517,24 +761,26 @@ export default function Create({ proposed_ppmp_no }: any) {
                                         variant="outline"
                                         onClick={() => addItem(detailIndex)}
                                         className="mt-2"
+                                        aria-label={`Add item to section ${detailIndex + 1}`}
                                     >
-                                        Add Item to this Section
+                                        + Add Item to this Section
                                     </Button>
                                 </div>
                             ))}
 
-                            <div className="flex items-center gap-4 justify-end">
-                                <div className="mr-auto text-sm text-muted-foreground">
-                                    <div className="flex flex-col">
-                                        <div>
-                                            Grand Total:{' '}
-                                            <span className="font-semibold">
-                                                {new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(computeGrandTotal())}
-                                            </span>
-                                        </div>
-                                        <div className="text-xs">
-                                            This automatically sets the Allocated Budget
-                                        </div>
+                            <div className="flex items-center gap-4 justify-end flex-wrap">
+                                <div className="mr-auto text-sm">
+                                    <div className="font-medium">
+                                        Grand Total:{' '}
+                                        <span className="text-lg font-bold text-primary">
+                                            {new Intl.NumberFormat('en-PH', {
+                                                style: 'currency',
+                                                currency: 'PHP'
+                                            }).format(grandTotal)}
+                                        </span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        This automatically sets the Allocated Budget
                                     </div>
                                 </div>
                                 <Button
@@ -542,8 +788,9 @@ export default function Create({ proposed_ppmp_no }: any) {
                                     variant="secondary"
                                     onClick={addDetail}
                                     disabled={processing}
+                                    aria-label="Add new section"
                                 >
-                                    Add New Section
+                                    + Add New Section
                                 </Button>
                                 <Button type="submit" disabled={processing}>
                                     {processing ? 'Creating...' : 'Create PPMP'}
