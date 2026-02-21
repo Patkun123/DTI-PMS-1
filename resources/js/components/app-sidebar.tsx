@@ -14,6 +14,7 @@ import {
 import { dashboard, userdashboard, usermanagementindex, } from '@/routes';
 import { index as purchaseRequestsIndex } from '@/routes/purchase-requests';
 import { index as ppmpIndex } from '@/routes/ppmp';
+import { index as sourceOfFundsIndex } from '@/routes/source-of-funds';
 import { type NavItem, type PageProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
@@ -73,6 +74,11 @@ export function AppSidebar() {
                 title: 'PPMP Management',
                 href: ppmpIndex(),
                 icon: BookmarkCheck,
+            },
+            {
+                title: 'Source of Funds',
+                href: sourceOfFundsIndex(),
+                icon: ScrollText,
             },
         );
     }

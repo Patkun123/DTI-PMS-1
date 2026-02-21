@@ -1,19 +1,17 @@
-import * as React from "react"
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-  VisibilityState,
-} from "@tanstack/react-table"
-import { ChevronDown, MoreHorizontal, Eye, Pencil, Trash } from "lucide-react"
-import { Link } from "@inertiajs/react"
+import { Head, Link, usePage, router } from "@inertiajs/react"
+import AppLayout from "@/layouts/app-layout"
+import { ToastContainer, toast } from 'react-toastify'
+import { Plus, MoreHorizontal, Eye, Pencil, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { type BreadcrumbItem } from "@/types"
+import { create as SourceCreate, edit as SourceEdit, show as SourceShow } from "@/routes/source-of-funds"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -42,30 +40,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import * as React from "react"
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+  VisibilityState,
+} from "@tanstack/react-table"
 
-type UserRow = {
+const DIVISIONS = [
+  { value: 'AFMD', label: 'AFMD' },
+  { value: 'MSSD', label: 'MSSD' },
+  { value: 'CPD', label: 'CPD' },
+  { value: 'IDD', label: 'IDD' },
+  { value: 'SDD', label: 'SDD' },
+  { value: 'RAPID', label: 'RAPID' },
+]
+
+type SourceOfFund = {
   id: number
   name: string
-  email: string
-  role: string
-  division: string | null
-  requester: string | null
+  division: string
+  description: string
   created_at: string
 }
 
-interface UsersTableProps {
-  data: UserRow[]
-  pagination: {
-    current_page: number
-    last_page: number
-    total: number
-    per_page: number
-  }
-  onDelete: (userId: number) => void
-}
-
-export const columns: ColumnDef<UserRow>[] = [
+const columns: ColumnDef<SourceOfFund>[] = [
   {
     id: "rowNumber",
     header: "#",
@@ -78,41 +84,18 @@ export const columns: ColumnDef<UserRow>[] = [
   },
   {
     accessorKey: "name",
-    header: "Name",
+    header: "Fund Name",
     cell: ({ row }) => <div className="text-xs font-medium">{row.getValue("name")}</div>,
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => <div className="text-xs">{row.getValue("email")}</div>,
-  },
-  {
-    accessorKey: "role",
-    header: "Role",
-    cell: ({ row }) => {
-      const role = row.getValue("role") as string
-      return (
-        <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="text-xs">
-          {role.charAt(0).toUpperCase() + role.slice(1)}
-        </Badge>
-      )
-    },
   },
   {
     accessorKey: "division",
     header: "Division",
-    cell: ({ row }) => {
-      const division = row.getValue("division") as string | null
-      return <div className="text-xs">{division || '-'}</div>
-    },
+    cell: ({ row }) => <div className="text-xs">{row.getValue("division") || '-'}</div>,
   },
   {
-    accessorKey: "requester",
-    header: "Chief",
-    cell: ({ row }) => {
-      const requester = row.getValue("requester") as string | null
-      return <div className="text-xs">{requester || '-'}</div>
-    },
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => <div className="text-xs truncate max-w-xs">{row.getValue("description") || '-'}</div>,
   },
   {
     accessorKey: "created_at",
@@ -127,8 +110,20 @@ export const columns: ColumnDef<UserRow>[] = [
     enableHiding: false,
     header: () => <div className="text-right"></div>,
     cell: ({ row }) => {
-      const user = row.original as UserRow
+      const item = row.original as SourceOfFund
       const [open, setOpen] = React.useState(false)
+
+      const handleDelete = () => {
+        router.delete(`/source-of-funds/${item.id}`, {
+          onSuccess: () => {
+            toast.success('Source of fund deleted successfully!')
+            setOpen(false)
+          },
+          onError: () => {
+            toast.error('Failed to delete source of fund.')
+          },
+        })
+      }
 
       return (
         <>
@@ -142,12 +137,7 @@ export const columns: ColumnDef<UserRow>[] = [
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={`/admin/users/${user.id}`} className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" /> View
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/admin/users/${user.id}/edit`} className="flex items-center gap-2">
+                <Link href={SourceEdit(item.id).url} className="flex items-center gap-2">
                   <Pencil className="h-4 w-4" /> Edit
                 </Link>
               </DropdownMenuItem>
@@ -164,17 +154,15 @@ export const columns: ColumnDef<UserRow>[] = [
           <AlertDialog open={open} onOpenChange={setOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                <AlertDialogTitle>Delete Source of Fund</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this user? This action cannot be undone.
+                  Are you sure you want to delete this source of fund? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => {
-                    setOpen(false)
-                  }}
+                  onClick={handleDelete}
                   className="bg-red-600 text-white hover:bg-red-700"
                 >
                   Delete
@@ -188,82 +176,14 @@ export const columns: ColumnDef<UserRow>[] = [
   },
 ]
 
-export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
+function SourceOfFundsTable({ data }: { data: SourceOfFund[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
 
   const table = useReactTable({
     data,
-    columns: columns.map(col =>
-      col.id === 'actions'
-        ? {
-            ...col,
-            cell: ({ row }) => {
-              const user = row.original as UserRow
-              const [open, setOpen] = React.useState(false)
-
-              const handleDeleteClick = () => {
-                setOpen(false)
-                onDelete(user.id)
-              }
-
-              return (
-                <>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/users/${user.id}`} className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" /> View
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/users/${user.id}/edit`} className="flex items-center gap-2">
-                          <Pencil className="h-4 w-4" /> Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={() => setOpen(true)}
-                      >
-                        <Trash className="h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <AlertDialog open={open} onOpenChange={setOpen}>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete User</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this user? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteClick}
-                          className="bg-red-600 text-white hover:bg-red-700"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              )
-            }
-          }
-        : col
-    ),
+    columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -289,7 +209,7 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
       {/* Filter + Columns toggle */}
       <div className="flex items-center py-4 gap-3">
         <Input
-          placeholder="Filter by name..."
+          placeholder="Filter by fund name..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(e) =>
             table.getColumn("name")?.setFilterValue(e.target.value)
@@ -299,7 +219,7 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
+              Columns
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -311,9 +231,7 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
                   key={column.id}
                   className="capitalize"
                   checked={column.getIsVisible()}
-                  onCheckedChange={(value) =>
-                    column.toggleVisibility(!!value)
-                  }
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 >
                   {column.id}
                 </DropdownMenuCheckboxItem>
@@ -332,10 +250,7 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
                   <TableHead key={header.id} className="sticky top-0 bg-zinc-100 dark:bg-zinc-800">
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -345,16 +260,10 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
             {table.getRowModel().rows?.length ? (
               <>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
+                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -362,11 +271,8 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
               </>
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No users found.
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No source of funds found.
                 </TableCell>
               </TableRow>
             )}
@@ -405,5 +311,75 @@ export function UsersTable({ data, pagination, onDelete }: UsersTableProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+  {
+    title: "Source of Funds",
+    href: '/source-of-funds',
+  },
+]
+
+export default function Index({ source_of_funds, divisions }: any) {
+  const { props }: any = usePage()
+
+  const handleDivisionChange = (value: string) => {
+    if (value === 'all') {
+      router.get('/source-of-funds')
+    } else {
+      router.get('/source-of-funds', { division: value })
+    }
+  }
+
+  const currentDivision = props.ziggy?.query?.division || 'all'
+
+  if (props.flash?.success) {
+    toast.success(props.flash.success)
+  }
+  if (props.flash?.error) {
+    toast.error(props.flash.error)
+  }
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title="Source of Funds" />
+      <ToastContainer />
+      <div className="flex flex-col gap-4 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Source of Funds</h1>
+            <p className="text-muted-foreground">Manage source of funds per division</p>
+          </div>
+          <Link href={SourceCreate().url}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add source
+            </Button>
+          </Link>
+        </div>
+
+        <div className="flex gap-4 items-center">
+          <div className="w-48">
+            <label className="text-sm font-medium mb-2 block">Filter by Division</label>
+            <Select value={currentDivision} onValueChange={handleDivisionChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Divisions</SelectItem>
+                {DIVISIONS.map((division) => (
+                  <SelectItem key={division.value} value={division.value}>
+                    {division.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <SourceOfFundsTable data={source_of_funds?.data || []} />
+      </div>
+    </AppLayout>
   )
 }
